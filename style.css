@@ -1,92 +1,74 @@
 body {
     font-family: Arial, sans-serif;
-    text-align: center;
-    background: #f0f8ff;
+    background: #f5f5f5;
     margin: 0;
     padding: 20px;
+    text-align: center;
 }
 
 .game-container {
     max-width: 600px;
     margin: 0 auto;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
-button {
-    background: #4CAF50;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    margin: 10px;
-    border-radius: 5px;
-    font-size: 16px;
-    cursor: pointer;
+h1 {
+    color: #2c3e50;
 }
 
-#game-area {
-    margin-top: 20px;
-    min-height: 300px;
+.stats {
+    display: flex;
+    justify-content: space-around;
+    margin: 20px 0;
+    font-size: 18px;
 }
 
-/* Memory Game Cards */
+#game-board {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin: 20px auto;
+}
+
 .card {
-    width: 80px;
-    height: 80px;
-    margin: 5px;
-    display: inline-block;
-    background: #4CAF50;
+    height: 100px;
+    background: #3498db;
     border-radius: 5px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    line-height: 80px;
-    font-size: 20px;
-    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 24px;
     color: white;
+    cursor: pointer;
     transition: all 0.3s ease;
+    transform-style: preserve-3d;
 }
 
 .card.flipped {
-    background: white;
-    color: black;
+    background: #ecf0f1;
+    color: #2c3e50;
     transform: rotateY(180deg);
 }
 
 .card.matched {
-    background: #FFD700;
+    background: #2ecc71;
     cursor: default;
-    transform: rotateY(180deg);
 }
 
-/* Scramble Game */
-#scramble-word {
-    font-size: 28px;
-    letter-spacing: 5px;
-    margin: 20px;
-    font-weight: bold;
-}
-
-#user-input {
-    padding: 12px;
-    font-size: 18px;
-    width: 80%;
-    max-width: 300px;
-    margin: 10px 0;
-    border: 2px solid #4CAF50;
+#reset-btn {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 16px;
     border-radius: 5px;
+    cursor: pointer;
+    margin-top: 20px;
 }
 
-#result {
-    font-weight: bold;
-    margin-top: 10px;
-    font-size: 18px;
-}
-
-#hint {
-    color: #666;
-    font-style: italic;
-    margin: 10px 0;
-}
-
-.mode-buttons {
-    display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
+#reset-btn:hover {
+    background: #c0392b;
 }
