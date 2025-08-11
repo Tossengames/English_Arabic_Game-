@@ -1,159 +1,127 @@
-// Word list: English -> Arabic
-const words = [
-    { english: "apple", arabic: "تفاحة" },
-    { english: "book", arabic: "كتاب" },
+// English-Arabic word pairs
+const wordPairs = [
     { english: "cat", arabic: "قطة" },
     { english: "dog", arabic: "كلب" },
+    { english: "sun", arabic: "شمس" },
+    { english: "moon", arabic: "قمر" },
+    { english: "book", arabic: "كتاب" },
     { english: "house", arabic: "منزل" },
     { english: "water", arabic: "ماء" },
-    { english: "sun", arabic: "شمس" },
-    { english: "moon", arabic: "قمر" }
+    { english: "apple", arabic: "تفاحة" }
 ];
 
-// Game state variables
-let score = 0;
+// Game state
 let flippedCards = [];
 let matchedPairs = 0;
-let currentScrambledWord = "";
-let currentWord = {};
+let attempts = 0;
+let canFlip = true;
 
-// Memory Game
-function startMemoryGame() {
-    score = 0;
+// Initialize game
+function initGame() {
+    const gameBoard = document.getElementById('game-board');
+    gameBoard.innerHTML = '';
+    flippedCards = [];
     matchedPairs = 0;
-    const gameArea = document.getElementById('game-area');
-    gameArea.innerHTML = `
-        <h2>Memory Game</h2>
-        <p>Score: <span id="score">0</span></p>
-        <div id="cards"></div>
-    `;
+    attempts = 0;
+    canFlip = true;
     
-    // Duplicate and shuffle cards
-    const cardPairs = [];
-    words.forEach(word => {
-        cardPairs.push({ ...word, type: 'english' });
-        cardPairs.push({ ...word, type: 'arabic' });
+    document.getElementById('matches').textContent = '0';
+    document.getElementById('attempts').textContent = '0';
+    document.getElementById('total-pairs').textContent = wordPairs.length;
+
+    // Create card deck
+    const cards = [];
+    wordPairs.forEach(pair => {
+        cards.push({ text: pair.english, pairId: pair.english, lang: 'english' });
+        cards.push({ text: pair.arabic, pairId: pair.english, lang: 'arabic' });
     });
-    
-    const shuffledCards = cardPairs.sort(() => Math.random() - 0.5);
-    
-    // Create cards
-    shuffledCards.forEach((word, index) => {
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.dataset.index = index;
-        card.dataset.id = word.english; // Use English word as ID
-        card.dataset.type = word.type;
-        card.textContent = word.type === 'english' ? word.english : word.arabic;
-        card.onclick = () => flipCard(card);
-        document.getElementById('cards').appendChild(card);
+
+    // Shuffle cards
+    shuffleArray(cards);
+
+    // Create card elements
+    cards.forEach((card, index) => {
+        const cardElement = document.createElement('div');
+        cardElement.className = 'card';
+        cardElement.dataset.index = index;
+        cardElement.dataset.pairId = card.pairId;
+        cardElement.dataset.lang = card.lang;
+        cardElement.textContent = card.text;
+        cardElement.addEventListener('click', flipCard);
+        gameBoard.appendChild(cardElement);
     });
 
     // Show cards briefly at start
-    showCardsBriefly();
+    showAllCards();
 }
 
-function showCardsBriefly() {
+// Shuffle array
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+}
+
+// Show all cards briefly
+function showAllCards() {
+    canFlip = false;
     const cards = document.querySelectorAll('.card');
     cards.forEach(card => card.classList.add('flipped'));
     
     setTimeout(() => {
         cards.forEach(card => card.classList.remove('flipped'));
-    }, 2000); // Show for 2 seconds
+        canFlip = true;
+    }, 2000);
 }
 
-function flipCard(card) {
-    // Ignore if already flipped or matched
-    if (card.classList.contains('flipped') || card.classList.contains('matched') || flippedCards.length >= 2) return;
+// Flip card
+function flipCard() {
+    if (!canFlip || this.classList.contains('flipped') || this.classList.contains('matched')) return;
     
-    card.classList.add('flipped');
-    flippedCards.push(card);
+    this.classList.add('flipped');
+    flippedCards.push(this);
     
-    // Check for match
     if (flippedCards.length === 2) {
-        const [card1, card2] = flippedCards;
+        canFlip = false;
+        attempts++;
+        document.getElementById('attempts').textContent = attempts;
         
-        if (card1.dataset.id === card2.dataset.id) {
-            // Match found
-            score += 10;
-            document.getElementById('score').textContent = score;
-            matchedPairs++;
-            
-            // Mark as matched
-            card1.classList.add('matched');
-            card2.classList.add('matched');
-            
-            // Check win condition
-            if (matchedPairs === words.length) {
-                setTimeout(() => alert(`You won! Score: ${score}`), 500);
-            }
-        } else {
-            // No match - flip back after delay
-            setTimeout(() => {
-                card1.classList.remove('flipped');
-                card2.classList.remove('flipped');
-            }, 1000);
+        checkForMatch();
+    }
+}
+
+// Check if flipped cards match
+function checkForMatch() {
+    const [card1, card2] = flippedCards;
+    
+    if (card1.dataset.pairId === card2.dataset.pairId) {
+        // Match found
+        card1.classList.add('matched');
+        card2.classList.add('matched');
+        matchedPairs++;
+        document.getElementById('matches').textContent = matchedPairs;
+        
+        if (matchedPairs === wordPairs.length) {
+            setTimeout(() => alert(`Congratulations! You won in ${attempts} attempts!`), 500);
         }
         
         flippedCards = [];
-    }
-}
-
-// Scramble Game
-function startScrambleGame() {
-    score = 0;
-    const gameArea = document.getElementById('game-area');
-    gameArea.innerHTML = `
-        <h2>Scramble Game</h2>
-        <p>Score: <span id="score">0</span></p>
-        <div id="scramble-container">
-            <div id="scramble-word"></div>
-            <input type="text" id="user-input" placeholder="Type the word...">
-            <button onclick="checkAnswer()">Check</button>
-            <p id="hint"></p>
-            <p id="result"></p>
-        </div>
-    `;
-    
-    nextScrambleWord();
-}
-
-function nextScrambleWord() {
-    currentWord = words[Math.floor(Math.random() * words.length)];
-    currentScrambledWord = scrambleWord(currentWord.english);
-    
-    document.getElementById('scramble-word').textContent = currentScrambledWord;
-    document.getElementById('hint').textContent = `Hint: ${currentWord.arabic}`;
-    document.getElementById('user-input').value = "";
-    document.getElementById('result').textContent = "";
-    document.getElementById('user-input').focus();
-}
-
-function scrambleWord(word) {
-    // Only scramble if word is longer than 3 letters
-    if (word.length <= 3) return word;
-    
-    // Convert to array and shuffle
-    const arr = word.split('');
-    for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    return arr.join('');
-}
-
-function checkAnswer() {
-    const userInput = document.getElementById('user-input').value.toLowerCase().trim();
-    const correctWord = currentWord.english.toLowerCase();
-    
-    if (userInput === correctWord) {
-        score += 5;
-        document.getElementById('score').textContent = score;
-        document.getElementById('result').textContent = "Correct! 🎉";
-        document.getElementById('result').style.color = "green";
-        setTimeout(nextScrambleWord, 1500);
+        canFlip = true;
     } else {
-        document.getElementById('result').textContent = "Wrong! Try again.";
-        document.getElementById('result').style.color = "red";
+        // No match
+        setTimeout(() => {
+            card1.classList.remove('flipped');
+            card2.classList.remove('flipped');
+            flippedCards = [];
+            canFlip = true;
+        }, 1000);
     }
 }
+
+// Reset game
+document.getElementById('reset-btn').addEventListener('click', initGame);
+
+// Start game
+initGame();
