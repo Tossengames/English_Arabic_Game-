@@ -1,54 +1,24 @@
-body {
-    font-family: Arial, sans-serif;
-    text-align: center;
-    background: #f0f8ff;
-    margin: 0;
-    padding: 20px;
-}
-
-.game-container {
-    max-width: 600px;
-    margin: 0 auto;
-}
-
-button {
+/* Memory Game */
+.card.flipped {
     background: #4CAF50;
     color: white;
-    border: none;
-    padding: 10px 20px;
-    margin: 10px;
-    border-radius: 5px;
-    font-size: 16px;
-    cursor: pointer;
+    transform: rotateY(180deg);
 }
 
-#game-area {
-    margin-top: 20px;
-    min-height: 300px;
-}
-
-/* Memory Game Cards */
-.card {
-    width: 80px;
-    height: 80px;
-    margin: 5px;
-    display: inline-block;
-    background: #fff;
-    border-radius: 5px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    line-height: 80px;
-    font-size: 24px;
-    cursor: pointer;
+.card.matched {
+    background: #FFD700;
+    cursor: default;
 }
 
 /* Scramble Game */
-#scramble-word {
-    font-size: 28px;
-    letter-spacing: 5px;
-    margin: 20px;
+#result {
+    font-weight: bold;
+    margin-top: 10px;
 }
 
 #user-input {
+    width: 80%;
     padding: 10px;
-    font-size: 16px;
+    font-size: 18px;
+    margin: 10px 0;
 }
