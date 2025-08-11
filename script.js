@@ -15,6 +15,7 @@ let score = 0;
 let flippedCards = [];
 let matchedPairs = 0;
 let currentScrambledWord = "";
+let currentWord = {};
 
 // Memory Game
 function startMemoryGame() {
@@ -28,52 +29,69 @@ function startMemoryGame() {
     `;
     
     // Duplicate and shuffle cards
-    const cards = [...words, ...words]
-        .map((word, index) => ({ ...word, id: index }))
-        .sort(() => Math.random() - 0.5);
+    const cardPairs = [];
+    words.forEach(word => {
+        cardPairs.push({ ...word, type: 'english' });
+        cardPairs.push({ ...word, type: 'arabic' });
+    });
+    
+    const shuffledCards = cardPairs.sort(() => Math.random() - 0.5);
     
     // Create cards
-    cards.forEach((word, index) => {
+    shuffledCards.forEach((word, index) => {
         const card = document.createElement('div');
         card.className = 'card';
         card.dataset.index = index;
-        card.dataset.id = word.id;
-        card.textContent = index % 2 === 0 ? word.english : word.arabic;
-        card.onclick = () => flipCard(card, word.id);
+        card.dataset.id = word.english; // Use English word as ID
+        card.dataset.type = word.type;
+        card.textContent = word.type === 'english' ? word.english : word.arabic;
+        card.onclick = () => flipCard(card);
         document.getElementById('cards').appendChild(card);
     });
+
+    // Show cards briefly at start
+    showCardsBriefly();
 }
 
-function flipCard(card, id) {
+function showCardsBriefly() {
+    const cards = document.querySelectorAll('.card');
+    cards.forEach(card => card.classList.add('flipped'));
+    
+    setTimeout(() => {
+        cards.forEach(card => card.classList.remove('flipped'));
+    }, 2000); // Show for 2 seconds
+}
+
+function flipCard(card) {
     // Ignore if already flipped or matched
-    if (card.classList.contains('flipped') || flippedCards.length >= 2) return;
+    if (card.classList.contains('flipped') || card.classList.contains('matched') || flippedCards.length >= 2) return;
     
     card.classList.add('flipped');
-    flippedCards.push({ card, id });
+    flippedCards.push(card);
     
     // Check for match
     if (flippedCards.length === 2) {
         const [card1, card2] = flippedCards;
         
-        if (card1.id === card2.id) {
+        if (card1.dataset.id === card2.dataset.id) {
             // Match found
             score += 10;
             document.getElementById('score').textContent = score;
             matchedPairs++;
             
-            // Disable matched cards
-            card1.card.classList.add('matched');
-            card2.card.classList.add('matched');
+            // Mark as matched
+            card1.classList.add('matched');
+            card2.classList.add('matched');
             
             // Check win condition
             if (matchedPairs === words.length) {
                 setTimeout(() => alert(`You won! Score: ${score}`), 500);
             }
         } else {
-            // No match
+            // No match - flip back after delay
             setTimeout(() => {
-                card1.card.classList.remove('flipped');
-                card2.card.classList.remove('flipped');
+                card1.classList.remove('flipped');
+                card2.classList.remove('flipped');
             }, 1000);
         }
         
@@ -88,35 +106,45 @@ function startScrambleGame() {
     gameArea.innerHTML = `
         <h2>Scramble Game</h2>
         <p>Score: <span id="score">0</span></p>
-        <div id="scramble-word"></div>
-        <input type="text" id="user-input" placeholder="Type the word...">
-        <button onclick="checkAnswer()">Check</button>
-        <p id="hint"></p>
-        <p id="result"></p>
+        <div id="scramble-container">
+            <div id="scramble-word"></div>
+            <input type="text" id="user-input" placeholder="Type the word...">
+            <button onclick="checkAnswer()">Check</button>
+            <p id="hint"></p>
+            <p id="result"></p>
+        </div>
     `;
     
     nextScrambleWord();
 }
 
 function nextScrambleWord() {
-    const randomWord = words[Math.floor(Math.random() * words.length)];
-    currentScrambledWord = scrambleWord(randomWord.english);
+    currentWord = words[Math.floor(Math.random() * words.length)];
+    currentScrambledWord = scrambleWord(currentWord.english);
     
     document.getElementById('scramble-word').textContent = currentScrambledWord;
-    document.getElementById('hint').textContent = `Hint: ${randomWord.arabic}`;
+    document.getElementById('hint').textContent = `Hint: ${currentWord.arabic}`;
     document.getElementById('user-input').value = "";
     document.getElementById('result').textContent = "";
+    document.getElementById('user-input').focus();
 }
 
 function scrambleWord(word) {
-    return word.split('').sort(() => Math.random() - 0.5).join('');
+    // Only scramble if word is longer than 3 letters
+    if (word.length <= 3) return word;
+    
+    // Convert to array and shuffle
+    const arr = word.split('');
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr.join('');
 }
 
 function checkAnswer() {
-    const userInput = document.getElementById('user-input').value.toLowerCase();
-    const correctWord = words.find(word => 
-        scrambleWord(word.english) === currentScrambledWord
-    ).english;
+    const userInput = document.getElementById('user-input').value.toLowerCase().trim();
+    const correctWord = currentWord.english.toLowerCase();
     
     if (userInput === correctWord) {
         score += 5;
