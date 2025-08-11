@@ -1,19 +1,18 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>English-Arabic Memory Game</title>
+    <title>English-Arabic Learning Games</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="game-container">
-        <h1>English ↔ Arabic Memory Game</h1>
-        <div class="stats">
-            <p>Matches: <span id="matches">0</span>/<span id="total-pairs">0</span></p>
-            <p>Attempts: <span id="attempts">0</span></p>
+        <h1>English ↔ Arabic Learning</h1>
+        <div class="game-selector">
+            <button onclick="startMemoryGame()">Memory Cards</button>
+            <button onclick="startScrambleGame()">Scramble Letters</button>
         </div>
-        <div id="game-board"></div>
-        <button id="reset-btn">New Game</button>
+        <div id="game-area"></div>
     </div>
     <script src="script.js"></script>
 </body>
