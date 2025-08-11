@@ -27,13 +27,12 @@ function initGame() {
     
     document.getElementById('matches').textContent = '0';
     document.getElementById('attempts').textContent = '0';
-    document.getElementById('total-pairs').textContent = wordPairs.length;
 
     // Create card deck
     const cards = [];
     wordPairs.forEach(pair => {
-        cards.push({ text: pair.english, pairId: pair.english, lang: 'english' });
-        cards.push({ text: pair.arabic, pairId: pair.english, lang: 'arabic' });
+        cards.push({ text: pair.english, pairId: pair.english, lang: 'en' });
+        cards.push({ text: pair.arabic, pairId: pair.english, lang: 'ar' });
     });
 
     // Shuffle cards
@@ -43,10 +42,24 @@ function initGame() {
     cards.forEach((card, index) => {
         const cardElement = document.createElement('div');
         cardElement.className = 'card';
-        cardElement.dataset.index = index;
         cardElement.dataset.pairId = card.pairId;
-        cardElement.dataset.lang = card.lang;
-        cardElement.textContent = card.text;
+        
+        const cardInner = document.createElement('div');
+        cardInner.className = 'card-inner';
+        
+        const cardFront = document.createElement('div');
+        cardFront.className = 'card-face card-front';
+        cardFront.textContent = card.text;
+        cardFront.setAttribute('lang', card.lang);
+        
+        const cardBack = document.createElement('div');
+        cardBack.className = 'card-face card-back';
+        cardBack.textContent = '?';
+        
+        cardInner.appendChild(cardFront);
+        cardInner.appendChild(cardBack);
+        cardElement.appendChild(cardInner);
+        
         cardElement.addEventListener('click', flipCard);
         gameBoard.appendChild(cardElement);
     });
@@ -55,7 +68,7 @@ function initGame() {
     showAllCards();
 }
 
-// Shuffle array
+// Fisher-Yates shuffle algorithm
 function shuffleArray(array) {
     for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -73,7 +86,7 @@ function showAllCards() {
     setTimeout(() => {
         cards.forEach(card => card.classList.remove('flipped'));
         canFlip = true;
-    }, 2000);
+    }, 2000); // 2 second preview
 }
 
 // Flip card
@@ -104,7 +117,7 @@ function checkForMatch() {
         document.getElementById('matches').textContent = matchedPairs;
         
         if (matchedPairs === wordPairs.length) {
-            setTimeout(() => alert(`Congratulations! You won in ${attempts} attempts!`), 500);
+            setTimeout(() => alert(`🎉 Congratulations! You won in ${attempts} attempts!`), 500);
         }
         
         flippedCards = [];
@@ -123,5 +136,5 @@ function checkForMatch() {
 // Reset game
 document.getElementById('reset-btn').addEventListener('click', initGame);
 
-// Start game
-initGame();
+// Start game when page loads
+window.addEventListener('DOMContentLoaded', initGame);
