@@ -1,104 +1,74 @@
 body {
     font-family: Arial, sans-serif;
-    background: #f0f8ff;
+    background: #f5f5f5;
     margin: 0;
     padding: 20px;
+    text-align: center;
 }
 
 .game-container {
     max-width: 600px;
     margin: 0 auto;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
 h1 {
     color: #2c3e50;
-    text-align: center;
 }
 
-.game-selector {
+.stats {
     display: flex;
-    justify-content: center;
-    gap: 10px;
+    justify-content: space-around;
     margin: 20px 0;
+    font-size: 18px;
 }
 
-button {
-    background: #4CAF50;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 5px;
-    font-size: 16px;
-    cursor: pointer;
-}
-
-#game-area {
-    margin-top: 20px;
-    min-height: 300px;
-}
-
-/* Memory Game */
-.memory-board {
+#game-board {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 10px;
-    margin: 0 auto;
+    margin: 20px auto;
 }
 
-.memory-card {
-    height: 80px;
+.card {
+    height: 100px;
     background: #3498db;
     border-radius: 5px;
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 20px;
+    font-size: 24px;
     color: white;
     cursor: pointer;
     transition: all 0.3s ease;
+    transform-style: preserve-3d;
 }
 
-.memory-card.revealed {
+.card.flipped {
     background: #ecf0f1;
     color: #2c3e50;
+    transform: rotateY(180deg);
 }
 
-.memory-card.matched {
+.card.matched {
     background: #2ecc71;
     cursor: default;
 }
 
-/* Scramble Game */
-.scramble-container {
-    text-align: center;
-}
-
-#scramble-word {
-    font-size: 28px;
-    letter-spacing: 5px;
-    margin: 20px;
-}
-
-#user-input {
-    padding: 10px;
+#reset-btn {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    padding: 10px 20px;
     font-size: 16px;
-    margin: 10px 0;
-    width: 80%;
-    max-width: 300px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 20px;
 }
 
-#hint {
-    color: #666;
-    font-style: italic;
-}
-
-#result {
-    font-weight: bold;
-    margin-top: 10px;
-    min-height: 24px;
-}
-
-.stats {
-    margin: 20px 0;
-    font-size: 18px;
+#reset-btn:hover {
+    background: #c0392b;
 }
