@@ -10,20 +10,24 @@
             margin: 0;
             padding: 20px;
             background-color: #f0f0f0;
+            touch-action: manipulation;
         }
         
         #game-container {
             display: flex;
             flex-direction: column;
             align-items: center;
+            max-width: 100%;
+            overflow: auto;
         }
         
         #game-board {
             display: grid;
-            grid-template-columns: repeat(15, 40px);
-            grid-template-rows: repeat(15, 40px);
             gap: 2px;
             margin-bottom: 20px;
+            background-color: #333;
+            padding: 5px;
+            border-radius: 5px;
         }
         
         .cell {
@@ -36,14 +40,16 @@
             align-items: center;
             cursor: pointer;
             font-size: 10px;
+            user-select: none;
         }
         
         .base {
-            background-color: #ff9800;
+            background-color: #8B4513; /* Brown */
         }
         
         .castle {
-            background-color: #f44336;
+            background-color: #000; /* Black */
+            border: 2px solid #ffd700;
         }
         
         .unit {
@@ -57,14 +63,28 @@
             font-weight: bold;
             font-size: 8px;
             position: relative;
+            z-index: 2;
         }
         
         .player-unit {
-            background-color: #2196F3;
+            background-color: #2196F3; /* Blue */
+            border: 2px solid #0d47a1;
         }
         
         .enemy-unit {
-            background-color: #9C27B0;
+            background-color: #f44336; /* Red */
+            border: 2px solid #b71c1c;
+        }
+        
+        .hp-display {
+            position: absolute;
+            bottom: -15px;
+            font-size: 10px;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 0 3px;
+            border-radius: 3px;
+            z-index: 3;
         }
         
         #unit-info {
@@ -73,6 +93,32 @@
             background-color: white;
             border-radius: 5px;
             width: 300px;
+            max-width: 100%;
+        }
+        
+        #action-menu {
+            position: absolute;
+            background-color: white;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 5px;
+            z-index: 10;
+            display: none;
+        }
+        
+        .action-btn {
+            display: block;
+            width: 100%;
+            padding: 5px;
+            margin: 2px 0;
+            background-color: #f0f0f0;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        
+        .action-btn:hover {
+            background-color: #ddd;
         }
         
         #end-turn-btn {
@@ -83,16 +129,19 @@
             border-radius: 5px;
             cursor: pointer;
             margin-top: 10px;
+            font-size: 16px;
         }
         
-        .hp-display {
-            position: absolute;
-            bottom: -15px;
-            font-size: 10px;
-            color: black;
-            background-color: rgba(255, 255, 255, 0.7);
-            padding: 0 3px;
-            border-radius: 3px;
+        .movement-range {
+            background-color: rgba(100, 255, 100, 0.3);
+        }
+        
+        .attack-range {
+            background-color: rgba(255, 100, 100, 0.3);
+        }
+        
+        .selected-unit {
+            box-shadow: 0 0 0 3px yellow;
         }
     </style>
 </head>
@@ -102,6 +151,7 @@
         <div id="game-board"></div>
         <div id="unit-info">Select a unit to see details</div>
         <button id="end-turn-btn">End Turn</button>
+        <div id="action-menu"></div>
     </div>
     <script src="game.js"></script>
 </body>
