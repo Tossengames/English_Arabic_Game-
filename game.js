@@ -3,38 +3,32 @@ const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
 const scoreElement = document.getElementById('score');
 const gameOverElement = document.getElementById('game-over');
-const tapIndicator = document.getElementById('tap-indicator');
 
-// Responsive canvas
-function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    player.y = canvas.height - 80;
-}
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
+// Fixed dimensions like Chrome Dino game
+const WIDTH = 600;
+const HEIGHT = 150;
+canvas.width = WIDTH;
+canvas.height = HEIGHT;
 
 // Game variables
 let gameSpeed = 5;
 let score = 0;
 let gameOver = false;
 let lastFrameTime = 0;
-let nextEnemyTime = 0;
+let nextEnemyTime = 2000; // Initial delay
 const MAX_SPEED = 15;
-let speedIncreaseTimer = 0;
 
-// Player
+// Player (ninja)
 const player = {
-    x: 100,
-    y: canvas.height - 80,
+    x: 50,
+    y: HEIGHT - 40,
     width: 30,
-    height: 50,
+    height: 40,
     velocityY: 0,
-    jumping: false,
-    ducking: false
+    jumping: false
 };
 
-// Enemies
+// Enemies (samurai)
 const enemies = [];
 
 // Game loop
@@ -53,36 +47,30 @@ function gameLoop(timestamp) {
 function update(deltaTime) {
     // Player physics
     player.y += player.velocityY;
-    player.velocityY += 0.5;
+    player.velocityY += 0.5; // Gravity
     
     // Ground collision
-    if (player.y > canvas.height - 80) {
-        player.y = canvas.height - 80;
+    if (player.y > HEIGHT - 40) {
+        player.y = HEIGHT - 40;
         player.jumping = false;
-        player.ducking = false;
     }
     
-    // Enemy spawning
+    // Enemy spawning - single samurai at random intervals
     nextEnemyTime -= deltaTime;
-    if (nextEnemyTime <= 0) {
-        const enemyCount = Math.floor(Math.random() * 3) + 1;
-        
-        for (let i = 0; i < enemyCount; i++) {
-            enemies.push({
-                x: canvas.width + (i * 200),
-                y: canvas.height - 80,
-                width: 25,
-                height: 60,
-                speed: gameSpeed
-            });
-        }
-        
-        nextEnemyTime = 400 + Math.random() * 800;
-        nextEnemyTime *= 5 / gameSpeed;
+    if (nextEnemyTime <= 0 && enemies.length === 0) {
+        enemies.push({
+            x: WIDTH,
+            y: HEIGHT - 50,
+            width: 25,
+            height: 50,
+            speed: gameSpeed
+        });
+        // Random delay between 0.8-2.5 seconds
+        nextEnemyTime = 800 + Math.random() * 1700;
     }
     
     // Move enemies
-    for (let i = enemies.length - 1; i >= 0; i--) {
+    for (let i = 0; i < enemies.length; i++) {
         enemies[i].x -= enemies[i].speed;
         
         // Collision detection
@@ -102,108 +90,71 @@ function update(deltaTime) {
         }
     }
     
-    // Progressive difficulty
-    speedIncreaseTimer += deltaTime;
-    if (speedIncreaseTimer > 1000 && gameSpeed < MAX_SPEED) {
-        gameSpeed += 0.01;
-        speedIncreaseTimer = 0;
-    }
-    
-    // Difficulty spikes
-    if (score > 0 && score % 100 === 0) {
-        gameSpeed = Math.min(gameSpeed + 0.5, MAX_SPEED);
+    // Increase difficulty gradually
+    if (gameSpeed < MAX_SPEED) {
+        gameSpeed += 0.001;
     }
 }
 
 function render() {
     // Clear canvas
     ctx.fillStyle = '#0a0e17';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
     
-    // Draw ground
+    // Draw ground (rooftop)
     ctx.fillStyle = '#333';
-    ctx.fillRect(0, canvas.height - 30, canvas.width, 30);
+    ctx.fillRect(0, HEIGHT - 20, WIDTH, 20);
     
     // Draw moon
     ctx.fillStyle = 'white';
     ctx.beginPath();
-    ctx.arc(canvas.width - 100, 50, 30, 0, Math.PI * 2);
+    ctx.arc(WIDTH - 50, 30, 15, 0, Math.PI * 2);
     ctx.fill();
     
-    // Draw player
+    // Draw player (ninja)
     ctx.fillStyle = 'black';
-    if (player.ducking) {
-        ctx.fillRect(player.x, player.y, player.width, player.height/2);
-    } else {
-        ctx.fillRect(player.x, player.y, player.width, player.height);
-    }
+    ctx.fillRect(player.x, player.y, player.width, player.height);
     
-    // Draw enemies
+    // Draw enemies (samurai)
     ctx.fillStyle = 'red';
     enemies.forEach(enemy => {
-        ctx.fillRect(enemy.x, enemy.y - enemy.height, enemy.width, enemy.height);
+        ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
     });
-    
-    // Draw speed indicator
-    ctx.fillStyle = 'rgba(255,255,255,0.3)';
-    ctx.fillRect(20, 20, 100, 10);
-    ctx.fillStyle = 'white';
-    ctx.fillRect(20, 20, 100 * (gameSpeed / MAX_SPEED), 10);
 }
 
 // Controls
-function handleTap() {
-    if (!gameOver) {
-        if (!player.jumping) {
-            player.velocityY = -12;
-            player.jumping = true;
-            player.ducking = false;
-        }
-    } else {
-        resetGame();
-    }
-}
-
-// Keyboard controls
 document.addEventListener('keydown', (e) => {
     if (e.code === 'Space' && !player.jumping && !gameOver) {
-        handleTap();
+        player.velocityY = -10;
+        player.jumping = true;
     }
     
     if (e.key.toLowerCase() === 'r' && gameOver) {
         resetGame();
     }
+});
+
+// Touch controls for mobile
+canvas.addEventListener('touchstart', () => {
+    if (!player.jumping && !gameOver) {
+        player.velocityY = -10;
+        player.jumping = true;
+    }
     
-    if (e.key === 'ArrowDown' && !player.jumping && !gameOver) {
-        player.ducking = true;
+    if (gameOver) {
+        resetGame();
     }
 });
-
-document.addEventListener('keyup', (e) => {
-    if (e.key === 'ArrowDown') {
-        player.ducking = false;
-    }
-});
-
-// Touch controls
-canvas.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    handleTap();
-});
-
-canvas.addEventListener('mousedown', handleTap);
 
 function resetGame() {
-    player.y = canvas.height - 80;
+    player.y = HEIGHT - 40;
     player.velocityY = 0;
     player.jumping = false;
-    player.ducking = false;
     enemies.length = 0;
     score = 0;
     gameSpeed = 5;
     gameOver = false;
-    nextEnemyTime = 0;
-    speedIncreaseTimer = 0;
+    nextEnemyTime = 2000;
     scoreElement.textContent = '0';
     gameOverElement.style.display = 'none';
 }
