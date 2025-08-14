@@ -1,16 +1,25 @@
 body {
     margin: 0;
+    padding: 0;
     overflow: hidden;
     background: #222;
+    touch-action: manipulation;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
 }
 
 #game-container {
     position: relative;
+    width: 100vw;
+    height: 100vh;
 }
 
 #game-canvas {
     display: block;
-    background: #0a0e17; /* Night blue */
+    background: #0a0e17;
+    width: 100%;
+    height: 100%;
 }
 
 #score {
@@ -20,6 +29,7 @@ body {
     color: white;
     font-family: Arial;
     font-size: 24px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
 }
 
 #game-over {
@@ -32,4 +42,22 @@ body {
     font-size: 32px;
     text-align: center;
     display: none;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+#tap-indicator {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255,255,255,0.5);
+    font-family: Arial;
+    font-size: 18px;
+    display: none;
+}
+
+@media (max-width: 600px) {
+    #tap-indicator {
+        display: block;
+    }
 }
