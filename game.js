@@ -1,11 +1,11 @@
 // Game Constants
-const MAP_SIZE = 15;
+const MAP_SIZE = 12; // Slightly smaller for mobile
 const TERRAIN_TYPES = {
     PLAIN: { moveCost: 1, defense: 0, color: '#8bc34a' },
     FOREST: { moveCost: 2, defense: 1, color: '#4CAF50' },
     MOUNTAIN: { moveCost: 3, defense: 2, color: '#795548' },
-    BASE: { moveCost: 1, defense: 5, color: '#ff9800', heal: 10, income: 50 },
-    CASTLE: { moveCost: 1, defense: 10, color: '#f44336', heal: 15, income: 100 }
+    BASE: { moveCost: 1, defense: 5, color: '#8B4513', heal: 10, income: 50 },
+    CASTLE: { moveCost: 1, defense: 10, color: '#000', heal: 15, income: 100 }
 };
 
 // Unit Classes
@@ -76,7 +76,9 @@ const gameState = {
     playerGold: 500,
     enemyGold: 500,
     bases: [],
-    castle: null
+    castle: null,
+    movementRange: [],
+    attackRange: []
 };
 
 // Initialize Game
@@ -87,51 +89,87 @@ function initGame() {
     setupEventListeners();
 }
 
-// Create Game Board
+// Create Game Board with better procedural generation
 function createBoard() {
     gameState.board = [];
     gameState.bases = [];
     
+    // Create empty board
     for (let y = 0; y < MAP_SIZE; y++) {
         const row = [];
         for (let x = 0; x < MAP_SIZE; x++) {
-            // Random terrain (simplified - you'll want better procedural generation)
-            let terrain;
-            const rand = Math.random();
-            
-            if (rand < 0.7) terrain = TERRAIN_TYPES.PLAIN;
-            else if (rand < 0.9) terrain = TERRAIN_TYPES.FOREST;
-            else terrain = TERRAIN_TYPES.MOUNTAIN;
-            
-            // Place castle in center
-            if (x === Math.floor(MAP_SIZE/2) && y === Math.floor(MAP_SIZE/2)) {
-                terrain = TERRAIN_TYPES.CASTLE;
-                gameState.castle = { x, y, owner: null };
-            }
-            // Place some bases
-            else if ((x === 3 && y === 3) || (x === MAP_SIZE-4 && y === 3) || 
-                     (x === 3 && y === MAP_SIZE-4) || (x === MAP_SIZE-4 && y === MAP_SIZE-4)) {
-                terrain = TERRAIN_TYPES.BASE;
-                gameState.bases.push({ x, y, owner: null });
-            }
-            
-            row.push({ terrain, unit: null });
+            row.push({ 
+                terrain: TERRAIN_TYPES.PLAIN, 
+                unit: null 
+            });
         }
         gameState.board.push(row);
+    }
+    
+    // Place castle in a strategic position (not exactly center)
+    const castleX = Math.floor(MAP_SIZE * 0.6);
+    const castleY = Math.floor(MAP_SIZE * 0.6);
+    gameState.board[castleY][castleX].terrain = TERRAIN_TYPES.CASTLE;
+    gameState.castle = { x: castleX, y: castleY, owner: null };
+    
+    // Place bases in strategic positions
+    const basePositions = [
+        {x: 2, y: 2},
+        {x: MAP_SIZE-3, y: 2},
+        {x: 2, y: MAP_SIZE-3},
+        {x: MAP_SIZE-3, y: MAP_SIZE-3}
+    ];
+    
+    basePositions.forEach(pos => {
+        gameState.board[pos.y][pos.x].terrain = TERRAIN_TYPES.BASE;
+        gameState.bases.push({ ...pos, owner: null });
+    });
+    
+    // Add some random terrain features
+    for (let y = 0; y < MAP_SIZE; y++) {
+        for (let x = 0; x < MAP_SIZE; x++) {
+            // Skip castle and bases
+            if ((x === castleX && y === castleY) || 
+                basePositions.some(p => p.x === x && p.y === y)) continue;
+                
+            const rand = Math.random();
+            if (rand < 0.2) {
+                gameState.board[y][x].terrain = TERRAIN_TYPES.FOREST;
+            } else if (rand < 0.25) {
+                gameState.board[y][x].terrain = TERRAIN_TYPES.MOUNTAIN;
+            }
+        }
     }
 }
 
 // Place Initial Units
 function placeUnits() {
+    // Clear existing units
+    gameState.playerUnits = [];
+    gameState.enemyUnits = [];
+    
     // Player starting units (top-left area)
     placeUnit(new Unit('Rikimaru', 1, 1, true));
     placeUnit(new Unit('Ayame', 2, 1, true));
     placeUnit(new Unit('Tissu', 1, 2, true));
     
-    // Enemy starting units (bottom-right area)
-    placeUnit(new Unit('Samurai', MAP_SIZE-2, MAP_SIZE-2, false));
-    placeUnit(new Unit('Archer', MAP_SIZE-3, MAP_SIZE-2, false));
-    placeUnit(new Unit('SpearSamurai', MAP_SIZE-2, MAP_SIZE-3, false));
+    // Enemy starting units (near castle)
+    const castleX = gameState.castle.x;
+    const castleY = gameState.castle.y;
+    
+    // Place enemies around the castle
+    const enemyPositions = [
+        {x: castleX-1, y: castleY},
+        {x: castleX+1, y: castleY},
+        {x: castleX, y: castleY-1}
+    ];
+    
+    const enemyTypes = ['Samurai', 'Archer', 'SpearSamurai'];
+    enemyPositions.forEach((pos, i) => {
+        if (pos.x >= 0 && pos.x < MAP_SIZE && pos.y >= 0 && pos.y < MAP_SIZE) {
+            placeUnit(new Unit(enemyTypes[i % enemyTypes.length], pos.x, pos.y, false));
+        }
+    });
 }
 
 function placeUnit(unit) {
@@ -161,10 +199,23 @@ function renderBoard() {
             if (cell.terrain === TERRAIN_TYPES.BASE) cellElement.classList.add('base');
             if (cell.terrain === TERRAIN_TYPES.CASTLE) cellElement.classList.add('castle');
             
+            // Highlight movement and attack ranges
+            if (gameState.movementRange.some(pos => pos.x === x && pos.y === y)) {
+                cellElement.classList.add('movement-range');
+            }
+            if (gameState.attackRange.some(pos => pos.x === x && pos.y === y)) {
+                cellElement.classList.add('attack-range');
+            }
+            
             if (cell.unit) {
                 const unitElement = document.createElement('div');
                 unitElement.className = `unit ${cell.unit.isPlayer ? 'player-unit' : 'enemy-unit'}`;
                 unitElement.textContent = cell.unit.type.charAt(0);
+                
+                // Highlight selected unit
+                if (gameState.selectedUnit === cell.unit) {
+                    unitElement.classList.add('selected-unit');
+                }
                 
                 // HP display
                 const hpElement = document.createElement('div');
@@ -182,10 +233,187 @@ function renderBoard() {
     }
 }
 
+// Calculate Movement Range
+function calculateMovementRange(unit) {
+    const movementRange = [];
+    const attackRange = [];
+    const visited = Array(MAP_SIZE).fill().map(() => Array(MAP_SIZE).fill(false));
+    
+    // Simple BFS for movement range
+    const queue = [{x: unit.x, y: unit.y, movesLeft: unit.move}];
+    visited[unit.y][unit.x] = true;
+    
+    while (queue.length > 0) {
+        const current = queue.shift();
+        
+        // Add to movement range if it's not the unit's current position
+        if (!(current.x === unit.x && current.y === unit.y)) {
+            movementRange.push({x: current.x, y: current.y});
+        }
+        
+        // Check adjacent cells
+        const directions = [{x: 0, y: -1}, {x: 1, y: 0}, {x: 0, y: 1}, {x: -1, y: 0}];
+        
+        for (const dir of directions) {
+            const newX = current.x + dir.x;
+            const newY = current.y + dir.y;
+            
+            if (newX >= 0 && newX < MAP_SIZE && newY >= 0 && newY < MAP_SIZE && !visited[newY][newX]) {
+                const cell = gameState.board[newY][newX];
+                const moveCost = cell.terrain.moveCost;
+                
+                if (current.movesLeft >= moveCost && !cell.unit) {
+                    visited[newY][newX] = true;
+                    queue.push({x: newX, y: newY, movesLeft: current.movesLeft - moveCost});
+                }
+            }
+        }
+    }
+    
+    // Calculate attack range
+    for (let y = 0; y < MAP_SIZE; y++) {
+        for (let x = 0; x < MAP_SIZE; x++) {
+            const distance = Math.abs(x - unit.x) + Math.abs(y - unit.y);
+            if (distance >= unit.minRange && distance <= unit.maxRange) {
+                attackRange.push({x, y});
+            }
+        }
+    }
+    
+    gameState.movementRange = movementRange;
+    gameState.attackRange = attackRange;
+}
+
+// Show Action Menu
+function showActionMenu(unit, x, y) {
+    const menu = document.getElementById('action-menu');
+    menu.innerHTML = '';
+    menu.style.display = 'block';
+    menu.style.left = `${x}px`;
+    menu.style.top = `${y}px`;
+    
+    // Stay option
+    const stayBtn = document.createElement('button');
+    stayBtn.className = 'action-btn';
+    stayBtn.textContent = 'Stay';
+    stayBtn.onclick = () => {
+        unit.moved = true;
+        hideActionMenu();
+        renderBoard();
+    };
+    menu.appendChild(stayBtn);
+    
+    // Attack option (if enemies in range)
+    const enemiesInRange = getEnemiesInAttackRange(unit);
+    if (enemiesInRange.length > 0 && unit.canAttack()) {
+        const attackBtn = document.createElement('button');
+        attackBtn.className = 'action-btn';
+        attackBtn.textContent = 'Attack';
+        attackBtn.onclick = () => {
+            showEnemyTargets(unit, enemiesInRange);
+            hideActionMenu();
+        };
+        menu.appendChild(attackBtn);
+    }
+    
+    // Occupy option (if on base/castle not owned)
+    const cell = gameState.board[unit.y][unit.x];
+    if ((cell.terrain === TERRAIN_TYPES.BASE || cell.terrain === TERRAIN_TYPES.CASTLE) && 
+        !(cell.terrain === TERRAIN_TYPES.CASTLE && gameState.castle.owner === 'player') &&
+        !(cell.terrain === TERRAIN_TYPES.BASE && gameState.bases.some(b => b.x === unit.x && b.y === unit.y && b.owner === 'player'))) {
+        const occupyBtn = document.createElement('button');
+        occupyBtn.className = 'action-btn';
+        occupyBtn.textContent = 'Occupy';
+        occupyBtn.onclick = () => {
+            occupyBuilding(unit);
+            hideActionMenu();
+            renderBoard();
+        };
+        menu.appendChild(occupyBtn);
+    }
+    
+    // Cancel option
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'action-btn';
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.onclick = hideActionMenu;
+    menu.appendChild(cancelBtn);
+}
+
+function hideActionMenu() {
+    document.getElementById('action-menu').style.display = 'none';
+}
+
+function getEnemiesInAttackRange(unit) {
+    const enemies = [];
+    for (let y = 0; y < MAP_SIZE; y++) {
+        for (let x = 0; x < MAP_SIZE; x++) {
+            const cell = gameState.board[y][x];
+            if (cell.unit && !cell.unit.isPlayer && cell.unit.currentHp > 0) {
+                const distance = Math.abs(x - unit.x) + Math.abs(y - unit.y);
+                if (distance >= unit.minRange && distance <= unit.maxRange) {
+                    enemies.push(cell.unit);
+                }
+            }
+        }
+    }
+    return enemies;
+}
+
+function showEnemyTargets(unit, enemies) {
+    // Highlight enemy targets
+    gameState.attackRange = [];
+    enemies.forEach(enemy => {
+        gameState.attackRange.push({x: enemy.x, y: enemy.y});
+    });
+    renderBoard();
+    
+    // Set up click handler for enemy selection
+    const board = document.getElementById('game-board');
+    const handler = (e) => {
+        const cellElement = e.target.closest('.cell');
+        if (!cellElement) return;
+        
+        const x = parseInt(cellElement.dataset.x);
+        const y = parseInt(cellElement.dataset.y);
+        const cell = gameState.board[y][x];
+        
+        if (cell.unit && !cell.unit.isPlayer && enemies.includes(cell.unit)) {
+            tryAttack(unit, cell.unit);
+            board.removeEventListener('click', handler);
+            gameState.attackRange = [];
+            renderBoard();
+        }
+    };
+    
+    board.addEventListener('click', handler);
+}
+
+function occupyBuilding(unit) {
+    const cell = gameState.board[unit.y][unit.x];
+    
+    if (cell.terrain === TERRAIN_TYPES.CASTLE) {
+        gameState.castle.owner = 'player';
+        checkGameEnd();
+    } else if (cell.terrain === TERRAIN_TYPES.BASE) {
+        const base = gameState.bases.find(b => b.x === unit.x && b.y === unit.y);
+        if (base) base.owner = 'player';
+    }
+    
+    unit.moved = true;
+}
+
 // Event Listeners
 function setupEventListeners() {
     document.getElementById('game-board').addEventListener('click', handleCellClick);
     document.getElementById('end-turn-btn').addEventListener('click', endTurn);
+    
+    // Hide action menu when clicking elsewhere
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#action-menu') && !e.target.closest('.unit')) {
+            hideActionMenu();
+        }
+    });
 }
 
 function handleCellClick(e) {
@@ -198,36 +426,40 @@ function handleCellClick(e) {
     const y = parseInt(cellElement.dataset.y);
     const cell = gameState.board[y][x];
     
-    // If a unit is selected
-    if (gameState.selectedUnit) {
-        const unit = gameState.selectedUnit;
+    // If we have movement range shown (after selecting a unit)
+    if (gameState.movementRange.length > 0) {
+        // Check if clicked on a movement range cell
+        const inMovementRange = gameState.movementRange.some(pos => pos.x === x && pos.y === y);
         
-        // If clicking on another unit
-        if (cell.unit) {
-            // If it's an enemy, try to attack
-            if (!cell.unit.isPlayer && unit.canAttack()) {
-                tryAttack(unit, cell.unit);
-            }
-            // Select the unit if it's ours
-            else if (cell.unit.isPlayer) {
-                selectUnit(cell.unit);
-            }
-        } 
-        // If clicking on empty cell, try to move
-        else if (unit.canMove()) {
-            tryMove(unit, x, y);
+        if (inMovementRange && !cell.unit) {
+            // Move the unit
+            const unit = gameState.selectedUnit;
+            gameState.board[unit.y][unit.x].unit = null;
+            unit.x = x;
+            unit.y = y;
+            gameState.board[y][x].unit = unit;
+            unit.moved = true;
+            
+            // Clear ranges and selection
+            gameState.movementRange = [];
+            gameState.attackRange = [];
+            renderBoard();
+            
+            // Show action menu
+            const rect = cellElement.getBoundingClientRect();
+            showActionMenu(unit, rect.left, rect.top);
+            return;
         }
-    } 
-    // Select a unit if it's ours
-    else if (cell.unit && cell.unit.isPlayer) {
-        selectUnit(cell.unit);
     }
-}
-
-function selectUnit(unit) {
-    gameState.selectedUnit = unit;
-    updateUnitInfo(unit);
-    highlightMovementRange(unit);
+    
+    // If clicking on a player unit
+    if (cell.unit && cell.unit.isPlayer && cell.unit.currentHp > 0) {
+        gameState.selectedUnit = cell.unit;
+        calculateMovementRange(cell.unit);
+        renderBoard();
+        updateUnitInfo(cell.unit);
+        return;
+    }
 }
 
 function updateUnitInfo(unit) {
@@ -239,48 +471,17 @@ function updateUnitInfo(unit) {
         <p>Defense: ${unit.defense}</p>
         <p>Move: ${unit.move}</p>
         <p>Range: ${unit.minRange}-${unit.maxRange}</p>
+        <p>Status: ${unit.moved ? 'Already moved' : 'Can move'}</p>
     `;
 }
 
-function highlightMovementRange(unit) {
-    // TODO: Implement movement range highlighting
-}
-
-function tryMove(unit, targetX, targetY) {
-    // TODO: Implement pathfinding and movement validation
-    // For now, just move directly if adjacent
-    if (Math.abs(unit.x - targetX) + Math.abs(unit.y - targetY) === 1) {
-        // Clear old position
-        gameState.board[unit.y][unit.x].unit = null;
-        
-        // Update unit position
-        unit.x = targetX;
-        unit.y = targetY;
-        unit.moved = true;
-        
-        // Set new position
-        gameState.board[targetY][targetX].unit = unit;
-        
-        // Check if standing on base/castle for defense
-        const terrain = gameState.board[targetY][targetX].terrain;
-        if (terrain === TERRAIN_TYPES.BASE || terrain === TERRAIN_TYPES.CASTLE) {
-            // Defense bonus is applied during combat calculation
-        }
-        
-        renderBoard();
-        gameState.selectedUnit = null;
-    }
-}
-
 function tryAttack(attacker, defender) {
-    // Calculate damage
+    // Calculate damage with terrain defense
     const terrainDefense = gameState.board[defender.y][defender.x].terrain.defense;
     const damage = Math.max(1, attacker.attack - (defender.defense + terrainDefense));
     
     // Apply damage
     const killed = defender.takeDamage(damage);
-    
-    // Mark attacker as having attacked
     attacker.attacked = true;
     
     // Update UI
@@ -308,62 +509,185 @@ function endTurn() {
     // Switch to enemy turn
     gameState.currentPlayer = 'enemy';
     gameState.selectedUnit = null;
+    gameState.movementRange = [];
+    gameState.attackRange = [];
     document.getElementById('unit-info').textContent = "Enemy turn...";
+    renderBoard();
     
-    // Process enemy AI (simplified)
+    // Process enemy AI
     setTimeout(enemyTurn, 1000);
 }
 
 function enemyTurn() {
-    // Simple AI: Move toward nearest player unit and attack
+    // Simple but smarter AI
     gameState.enemyUnits.forEach(unit => {
         if (unit.currentHp <= 0) return;
         
-        // Find closest player unit
-        let closestPlayer = null;
-        let minDistance = Infinity;
-        
-        gameState.playerUnits.forEach(player => {
-            if (player.currentHp <= 0) return;
+        // Try to heal if low on health
+        if (unit.currentHp < unit.maxHp * 0.4) {
+            // Find nearest friendly base/castle
+            let nearestHeal = null;
+            let minDistance = Infinity;
             
-            const dist = Math.abs(unit.x - player.x) + Math.abs(unit.y - player.y);
-            if (dist < minDistance) {
-                minDistance = dist;
-                closestPlayer = player;
-            }
-        });
-        
-        if (closestPlayer) {
-            // Try to move toward player
-            const dx = closestPlayer.x - unit.x;
-            const dy = closestPlayer.y - unit.y;
-            
-            let moveX = unit.x;
-            let moveY = unit.y;
-            
-            if (Math.abs(dx) > Math.abs(dy)) {
-                moveX += dx > 0 ? 1 : -1;
-            } else {
-                moveY += dy > 0 ? 1 : -1;
-            }
-            
-            // Validate move
-            if (moveX >= 0 && moveX < MAP_SIZE && moveY >= 0 && moveY < MAP_SIZE) {
-                const targetCell = gameState.board[moveY][moveX];
-                if (!targetCell.unit) {
-                    // Move
-                    gameState.board[unit.y][unit.x].unit = null;
-                    unit.x = moveX;
-                    unit.y = moveY;
-                    gameState.board[moveY][moveX].unit = unit;
-                    unit.moved = true;
+            // Check castle
+            if (gameState.castle.owner === 'enemy' || gameState.castle.owner === null) {
+                const dist = Math.abs(unit.x - gameState.castle.x) + Math.abs(unit.y - gameState.castle.y);
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    nearestHeal = gameState.castle;
                 }
             }
             
-            // Try to attack if in range
-            const distAfterMove = Math.abs(unit.x - closestPlayer.x) + Math.abs(unit.y - closestPlayer.y);
-            if (distAfterMove >= unit.minRange && distAfterMove <= unit.maxRange) {
-                tryAttack(unit, closestPlayer);
+            // Check bases
+            gameState.bases.forEach(base => {
+                if (base.owner === 'enemy' || base.owner === null) {
+                    const dist = Math.abs(unit.x - base.x) + Math.abs(unit.y - base.y);
+                    if (dist < minDistance) {
+                        minDistance = dist;
+                        nearestHeal = base;
+                    }
+                }
+            });
+            
+            // Move toward healing spot
+            if (nearestHeal && minDistance > 0) {
+                const dx = nearestHeal.x - unit.x;
+                const dy = nearestHeal.y - unit.y;
+                
+                let moveX = unit.x;
+                let moveY = unit.y;
+                
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    moveX += dx > 0 ? 1 : -1;
+                } else {
+                    moveY += dy > 0 ? 1 : -1;
+                }
+                
+                // Validate move
+                if (moveX >= 0 && moveX < MAP_SIZE && moveY >= 0 && moveY < MAP_SIZE) {
+                    const targetCell = gameState.board[moveY][moveX];
+                    if (!targetCell.unit) {
+                        // Move
+                        gameState.board[unit.y][unit.x].unit = null;
+                        unit.x = moveX;
+                        unit.y = moveY;
+                        gameState.board[moveY][moveX].unit = unit;
+                        unit.moved = true;
+                        
+                        // Occupy if reached
+                        if (moveX === nearestHeal.x && moveY === nearestHeal.y) {
+                            if (nearestHeal === gameState.castle) {
+                                gameState.castle.owner = 'enemy';
+                            } else {
+                                const base = gameState.bases.find(b => b.x === moveX && b.y === moveY);
+                                if (base) base.owner = 'enemy';
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // If didn't move yet, try to attack or capture
+        if (!unit.moved) {
+            // Find closest player unit or base
+            let target = null;
+            let minDistance = Infinity;
+            let isBase = false;
+            
+            // Check player units
+            gameState.playerUnits.forEach(player => {
+                if (player.currentHp <= 0) return;
+                
+                const dist = Math.abs(unit.x - player.x) + Math.abs(unit.y - player.y);
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    target = player;
+                    isBase = false;
+                }
+            });
+            
+            // Check player bases/castle if they're closer
+            if (gameState.castle.owner === 'player') {
+                const dist = Math.abs(unit.x - gameState.castle.x) + Math.abs(unit.y - gameState.castle.y);
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    target = gameState.castle;
+                    isBase = true;
+                }
+            }
+            
+            gameState.bases.forEach(base => {
+                if (base.owner === 'player') {
+                    const dist = Math.abs(unit.x - base.x) + Math.abs(unit.y - base.y);
+                    if (dist < minDistance) {
+                        minDistance = dist;
+                        target = base;
+                        isBase = true;
+                    }
+                }
+            });
+            
+            if (target) {
+                if (isBase) {
+                    // Move toward base/castle
+                    const dx = target.x - unit.x;
+                    const dy = target.y - unit.y;
+                    
+                    let moveX = unit.x;
+                    let moveY = unit.y;
+                    
+                    if (Math.abs(dx) > Math.abs(dy)) {
+                        moveX += dx > 0 ? 1 : -1;
+                    } else {
+                        moveY += dy > 0 ? 1 : -1;
+                    }
+                    
+                    // Validate move
+                    if (moveX >= 0 && moveX < MAP_SIZE && moveY >= 0 && moveY < MAP_SIZE) {
+                        const targetCell = gameState.board[moveY][moveX];
+                        if (!targetCell.unit) {
+                            // Move
+                            gameState.board[unit.y][unit.x].unit = null;
+                            unit.x = moveX;
+                            unit.y = moveY;
+                            gameState.board[moveY][moveX].unit = unit;
+                            unit.moved = true;
+                        }
+                    }
+                } else {
+                    // Check if in attack range
+                    const distance = Math.abs(unit.x - target.x) + Math.abs(unit.y - target.y);
+                    if (distance >= unit.minRange && distance <= unit.maxRange) {
+                        tryAttack(unit, target);
+                    } else {
+                        // Move toward player unit
+                        const dx = target.x - unit.x;
+                        const dy = target.y - unit.y;
+                        
+                        let moveX = unit.x;
+                        let moveY = unit.y;
+                        
+                        if (Math.abs(dx) > Math.abs(dy)) {
+                            moveX += dx > 0 ? 1 : -1;
+                        } else {
+                            moveY += dy > 0 ? 1 : -1;
+                        }
+                        
+                        // Validate move
+                        if (moveX >= 0 && moveX < MAP_SIZE && moveY >= 0 && moveY < MAP_SIZE) {
+                            const targetCell = gameState.board[moveY][moveX];
+                            if (!targetCell.unit) {
+                                // Move
+                                gameState.board[unit.y][unit.x].unit = null;
+                                unit.x = moveX;
+                                unit.y = moveY;
+                                gameState.board[moveY][moveX].unit = unit;
+                                unit.moved = true;
+                            }
+                        }
+                    }
+                }
             }
         }
     });
@@ -373,25 +697,31 @@ function enemyTurn() {
     gameState.currentPlayer = 'player';
     document.getElementById('unit-info').textContent = "Your turn. Select a unit.";
     renderBoard();
+    checkGameEnd();
 }
 
 function checkGameEnd() {
     // Check if player has no units left
     if (gameState.playerUnits.every(unit => unit.currentHp <= 0)) {
-        alert("Game Over! You were defeated.");
+        setTimeout(() => alert("Game Over! You were defeated."), 100);
         return;
     }
     
     // Check if enemy has no units left
     if (gameState.enemyUnits.every(unit => unit.currentHp <= 0)) {
-        alert("Victory! You defeated all enemies.");
+        setTimeout(() => alert("Victory! You defeated all enemies."), 100);
         return;
     }
     
     // Check if player captured the castle
-    const castleCell = gameState.board[gameState.castle.y][gameState.castle.x];
-    if (castleCell.unit && castleCell.unit.isPlayer) {
-        alert("Victory! You captured the castle!");
+    if (gameState.castle.owner === 'player') {
+        setTimeout(() => alert("Victory! You captured the castle!"), 100);
+        return;
+    }
+    
+    // Check if enemy captured the castle
+    if (gameState.castle.owner === 'enemy') {
+        setTimeout(() => alert("Defeat! The enemy captured your castle!"), 100);
         return;
     }
 }
