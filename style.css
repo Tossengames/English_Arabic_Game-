@@ -1,41 +1,85 @@
+/* Base Styles */
 body {
-    font-family: Arial, sans-serif;
+    font-family: 'Arial', sans-serif;
     background-color: #f0f0f0;
     margin: 0;
     padding: 20px;
+    color: #333;
 }
 
 #game-container {
-    display: flex;
+    max-width: 1200px;
+    margin: 0 auto;
+    background-color: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
 }
 
+#header {
+    text-align: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #ddd;
+}
+
+#game-info {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 10px;
+    font-weight: bold;
+}
+
+#main-content {
+    display: flex;
+    gap: 20px;
+}
+
+#map-container {
+    flex: 2;
+}
+
+#side-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Map and Tile Styles */
 #map {
     display: grid;
-    grid-template-columns: repeat(10, 50px);
-    grid-template-rows: repeat(10, 50px);
+    grid-template-columns: repeat(10, 60px);
+    grid-template-rows: repeat(10, 60px);
     gap: 2px;
+    background-color: #ddd;
+    padding: 5px;
+    border-radius: 5px;
 }
 
 .tile {
-    width: 50px;
-    height: 50px;
+    width: 60px;
+    height: 60px;
     display: flex;
     justify-content: center;
     align-items: center;
     font-weight: bold;
     cursor: pointer;
     user-select: none;
+    position: relative;
+    border-radius: 3px;
 }
 
 .plain { background-color: #a9d18e; }
 .forest { background-color: #2e7d32; color: white; }
 .river { background-color: #5b9bd5; color: white; }
-.castle { background-color: #c55a11; color: white; }
+.base { background-color: #c55a11; }
+.HQ { background-color: #8b0000; }
 
+/* Unit Styles */
 .unit {
-    position: absolute;
-    width: 40px;
-    height: 40px;
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
     display: flex;
     justify-content: center;
@@ -43,18 +87,132 @@ body {
     font-weight: bold;
     color: white;
     cursor: pointer;
+    position: relative;
+    box-shadow: 0 0 5px rgba(0,0,0,0.5);
 }
 
-.player-unit { border: 2px solid blue; }
-.enemy-unit { border: 2px solid red; }
+.player-unit { border: 3px solid #3498db; }
+.enemy-unit { border: 3px solid #e74c3c; }
 
-.highlight-move { background-color: rgba(0, 255, 0, 0.3); }
-.highlight-attack { background-color: rgba(255, 0, 0, 0.3); }
+/* HP Display */
+.hp-bar {
+    position: absolute;
+    bottom: 5px;
+    left: 5px;
+    right: 5px;
+    height: 5px;
+    background-color: #ff0000;
+    border-radius: 3px;
+    overflow: hidden;
+}
 
-#info-panel {
-    margin-left: 20px;
+.hp-fill {
+    height: 100%;
+    background-color: #00ff00;
+    transition: width 0.3s;
+}
+
+.hp-text {
+    position: absolute;
+    top: -20px;
+    width: 100%;
+    text-align: center;
+    font-size: 12px;
+    color: white;
+    text-shadow: 1px 1px 1px black;
+}
+
+/* Highlighting */
+.highlight-move {
+    box-shadow: inset 0 0 0 3px #2ecc71;
+}
+
+.highlight-attack {
+    box-shadow: inset 0 0 0 3px #e74c3c;
+}
+
+.highlight-selected {
+    box-shadow: inset 0 0 0 3px #3498db;
+}
+
+/* Side Panel Styles */
+#unit-info, #actions-panel, #combat-log {
+    background-color: #f9f9f9;
+    padding: 15px;
+    border-radius: 5px;
+    box-shadow: 0 0 5px rgba(0,0,0,0.1);
+}
+
+#selected-unit-info {
+    min-height: 100px;
     padding: 10px;
     background-color: white;
-    border-radius: 5px;
-    width: 200px;
+    border-radius: 3px;
+    margin-top: 10px;
+}
+
+#actions-panel button {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+#actions-panel button:hover {
+    background-color: #2980b9;
+}
+
+#actions-panel button:disabled {
+    background-color: #95a5a6;
+    cursor: not-allowed;
+}
+
+#log-entries {
+    height: 200px;
+    overflow-y: auto;
+    background-color: white;
+    padding: 10px;
+    border-radius: 3px;
+    margin-top: 10px;
+    font-size: 14px;
+}
+
+.log-entry {
+    margin-bottom: 5px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #eee;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    #main-content {
+        flex-direction: column;
+    }
+    
+    #map {
+        grid-template-columns: repeat(10, 40px);
+        grid-template-rows: repeat(10, 40px);
+    }
+    
+    .tile {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .unit {
+        width: 35px;
+        height: 35px;
+        font-size: 12px;
+    }
+    
+    .hp-text {
+        top: -15px;
+        font-size: 10px;
+    }
 }
