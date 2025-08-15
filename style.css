@@ -1,4 +1,3 @@
-/* Base Styles */
 body {
     font-family: 'Arial', sans-serif;
     background-color: #f0f0f0;
@@ -46,7 +45,6 @@ body {
     gap: 20px;
 }
 
-/* Map and Tile Styles */
 #map {
     display: grid;
     grid-template-columns: repeat(10, 60px);
@@ -68,15 +66,18 @@ body {
     user-select: none;
     position: relative;
     border-radius: 3px;
+    transition: all 0.2s;
 }
 
 .plain { background-color: #a9d18e; }
 .forest { background-color: #2e7d32; color: white; }
 .river { background-color: #5b9bd5; color: white; }
 .base { background-color: #c55a11; }
+.player-base { background-color: #3498db; }
+.enemy-base { background-color: #e74c3c; }
 .HQ { background-color: #8b0000; }
+.player-HQ { background-color: #3498db; }
 
-/* Unit Styles */
 .unit {
     width: 50px;
     height: 50px;
@@ -89,12 +90,12 @@ body {
     cursor: pointer;
     position: relative;
     box-shadow: 0 0 5px rgba(0,0,0,0.5);
+    transition: transform 0.3s;
 }
 
 .player-unit { border: 3px solid #3498db; }
 .enemy-unit { border: 3px solid #e74c3c; }
 
-/* HP Display */
 .hp-bar {
     position: absolute;
     bottom: 5px;
@@ -112,17 +113,6 @@ body {
     transition: width 0.3s;
 }
 
-.hp-text {
-    position: absolute;
-    top: -20px;
-    width: 100%;
-    text-align: center;
-    font-size: 12px;
-    color: white;
-    text-shadow: 1px 1px 1px black;
-}
-
-/* Highlighting */
 .highlight-move {
     box-shadow: inset 0 0 0 3px #2ecc71;
 }
@@ -135,7 +125,59 @@ body {
     box-shadow: inset 0 0 0 3px #3498db;
 }
 
-/* Side Panel Styles */
+.smoke-effect {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%);
+    opacity: 0;
+    animation: smoke 0.5s ease-out;
+}
+
+.blood-effect {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(255,0,0,0.5) 0%, rgba(255,0,0,0) 70%);
+    opacity: 0;
+    animation: blood 0.3s ease-out;
+}
+
+.capture-effect {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%);
+    opacity: 0;
+    animation: capture 0.5s ease-out;
+}
+
+@keyframes smoke {
+    0% { opacity: 0; transform: scale(0.5); }
+    50% { opacity: 0.8; }
+    100% { opacity: 0; transform: scale(1.5); }
+}
+
+@keyframes blood {
+    0% { opacity: 0; transform: scale(0.5); }
+    50% { opacity: 0.7; }
+    100% { opacity: 0; transform: scale(1.5); }
+}
+
+@keyframes capture {
+    0% { opacity: 0; transform: scale(0.5); }
+    50% { opacity: 0.8; }
+    100% { opacity: 0; transform: scale(1.5); }
+}
+
+@keyframes shake {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    50% { transform: translateX(5px); }
+    75% { transform: translateX(-5px); }
+    100% { transform: translateX(0); }
+}
+
 #unit-info, #actions-panel, #combat-log {
     background-color: #f9f9f9;
     padding: 15px;
@@ -189,7 +231,46 @@ body {
     border-bottom: 1px solid #eee;
 }
 
-/* Responsive */
+#difficulty-selector {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+}
+
+#difficulty-box {
+    background-color: white;
+    padding: 30px;
+    border-radius: 10px;
+    text-align: center;
+    max-width: 500px;
+}
+
+#difficulty-box h2 {
+    margin-top: 0;
+}
+
+.difficulty-btn {
+    padding: 10px 20px;
+    margin: 10px;
+    font-size: 16px;
+    cursor: pointer;
+    border: none;
+    border-radius: 5px;
+    background-color: #3498db;
+    color: white;
+}
+
+.difficulty-btn:hover {
+    background-color: #2980b9;
+}
+
 @media (max-width: 900px) {
     #main-content {
         flex-direction: column;
@@ -209,10 +290,5 @@ body {
         width: 35px;
         height: 35px;
         font-size: 12px;
-    }
-    
-    .hp-text {
-        top: -15px;
-        font-size: 10px;
     }
 }
