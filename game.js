@@ -125,7 +125,14 @@ const gameState = {
     gold: 0,
     turn: 1,
     gamePhase: 'playerTurn',
-    combatLog: []
+    combatLog: [],
+    difficulty: 'normal',
+    playerBases: 0,
+    enemyBases: 0,
+    hqControlledBy: 'enemy',
+    enemySpawnTimer: 0,
+    enemySpawnInterval: 3,
+    hqPosition: { x: 0, y: 0 }
 };
 
 // DOM Elements
@@ -137,7 +144,8 @@ const elements = {
     selectedUnitInfo: null,
     endTurnBtn: null,
     buyUnitBtn: null,
-    logEntries: null
+    logEntries: null,
+    difficultySelector: null
 };
 
 // Initialize Game
@@ -151,11 +159,38 @@ function initGame() {
     elements.endTurnBtn = document.getElementById('end-turn-btn');
     elements.buyUnitBtn = document.getElementById('buy-unit-btn');
     elements.logEntries = document.getElementById('log-entries');
+    elements.difficultySelector = document.getElementById('difficulty-selector');
 
     // Set up event listeners
     elements.endTurnBtn.addEventListener('click', endTurn);
     elements.buyUnitBtn.addEventListener('click', buyUnit);
 
+    // Set up difficulty selection
+    document.querySelectorAll('.difficulty-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            gameState.difficulty = btn.dataset.difficulty;
+            setDifficulty();
+            elements.difficultySelector.style.display = 'none';
+            startGame();
+        });
+    });
+}
+
+function setDifficulty() {
+    switch(gameState.difficulty) {
+        case 'easy':
+            gameState.enemySpawnInterval = 5;
+            break;
+        case 'normal':
+            gameState.enemySpawnInterval = 3;
+            break;
+        case 'hard':
+            gameState.enemySpawnInterval = 2;
+            break;
+    }
+}
+
+function startGame() {
     // Generate game world
     generateMap();
     placeInitialUnits();
@@ -164,6 +199,7 @@ function initGame() {
     renderMap();
     updateUI();
     addToLog("Game started! Defeat the enemy HQ to win!");
+    addToLog(`Difficulty: ${gameState.difficulty.charAt(0).toUpperCase() + gameState.difficulty.slice(1)}`);
 }
 
 // Generate Random Map
@@ -179,31 +215,22 @@ function generateMap() {
         gameState.map.push(row);
     }
 
-    // Place 2x2 bases (2-4 of them)
-    const baseCount = 2 + Math.floor(Math.random() * 3);
+    // Place bases (1x1 with H)
+    const baseCount = 3 + Math.floor(Math.random() * 3);
     for (let i = 0; i < baseCount; i++) {
-        const x = Math.floor(Math.random() * (MAP_SIZE - 1));
-        const y = Math.floor(Math.random() * (MAP_SIZE - 1));
+        const x = Math.floor(Math.random() * MAP_SIZE);
+        const y = Math.floor(Math.random() * MAP_SIZE);
         
-        for (let dy = 0; dy < 2; dy++) {
-            for (let dx = 0; dx < 2; dx++) {
-                if (y + dy < MAP_SIZE && x + dx < MAP_SIZE) {
-                    gameState.map[y + dy][x + dx] = TERRAIN_TYPES.BASE;
-                }
-            }
+        if (gameState.map[y][x] === TERRAIN_TYPES.PLAIN) {
+            gameState.map[y][x] = TERRAIN_TYPES.BASE;
         }
     }
 
-    // Place 3x3 HQ (enemy base)
-    const hqX = Math.floor(Math.random() * (MAP_SIZE - 2));
-    const hqY = Math.floor(Math.random() * (MAP_SIZE - 2));
-    for (let dy = 0; dy < 3; dy++) {
-        for (let dx = 0; dx < 3; dx++) {
-            if (hqY + dy < MAP_SIZE && hqX + dx < MAP_SIZE) {
-                gameState.map[hqY + dy][hqX + dx] = TERRAIN_TYPES.HQ;
-            }
-        }
-    }
+    // Place HQ (1x1 with Q)
+    const hqX = Math.floor(Math.random() * MAP_SIZE);
+    const hqY = Math.floor(Math.random() * MAP_SIZE);
+    gameState.map[hqY][hqX] = TERRAIN_TYPES.HQ;
+    gameState.hqPosition = { x: hqX, y: hqY };
 
     // Add forests and rivers
     for (let y = 0; y < MAP_SIZE; y++) {
@@ -221,6 +248,10 @@ function generateMap() {
 function placeInitialUnits() {
     gameState.units = [];
     gameState.gold = 0;
+    gameState.playerBases = 0;
+    gameState.enemyBases = 0;
+    gameState.hqControlledBy = 'enemy';
+    gameState.enemySpawnTimer = 0;
     
     // Player units - start with one random unit
     const playerUnits = [
@@ -237,52 +268,51 @@ function placeInitialUnits() {
     
     // Enemy units - place near HQ
     const enemyTypes = [UNIT_TYPES.SAMURAI, UNIT_TYPES.ARCHER, UNIT_TYPES.SPEAR_SAMURAI];
-    const hqArea = findHQArea();
     
-    // Place 3-5 enemy units around HQ
-    const enemyCount = 3 + Math.floor(Math.random() * 3);
+    // Place 2-4 enemy units around HQ
+    const enemyCount = 2 + Math.floor(Math.random() * 3);
     for (let i = 0; i < enemyCount; i++) {
         const randomEnemy = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
-        
-        // Find position near HQ
-        let x, y;
-        let attempts = 0;
-        do {
-            // Get random position in 5x5 area around HQ center
-            const hqCenterX = hqArea.x + 1;
-            const hqCenterY = hqArea.y + 1;
-            x = hqCenterX + Math.floor(Math.random() * 5) - 2;
-            y = hqCenterY + Math.floor(Math.random() * 5) - 2;
-            attempts++;
-            
-            // If we can't find a spot after many attempts, just place randomly
-            if (attempts > 20) {
-                x = Math.floor(Math.random() * MAP_SIZE);
-                y = Math.floor(Math.random() * MAP_SIZE);
-            }
-        } while (
-            x < 0 || x >= MAP_SIZE || 
-            y < 0 || y >= MAP_SIZE ||
-            gameState.map[y][x] === TERRAIN_TYPES.RIVER || 
-            gameState.units.some(u => u.x === x && u.y === y) ||
-            (gameState.map[y][x] === TERRAIN_TYPES.BASE) ||
-            (gameState.map[y][x] === TERRAIN_TYPES.HQ)
-        );
-        
-        placeUnit(randomEnemy, 'enemy');
+        placeUnitNearHQ(randomEnemy, 'enemy');
     }
 }
 
-// Find the top-left corner of the HQ
-function findHQArea() {
-    for (let y = 0; y < MAP_SIZE; y++) {
-        for (let x = 0; x < MAP_SIZE; x++) {
-            if (gameState.map[y][x] === TERRAIN_TYPES.HQ) {
-                return { x, y };
-            }
+function placeUnitNearHQ(unitType, faction) {
+    let x, y;
+    let attempts = 0;
+    
+    do {
+        // Get random position in 5x5 area around HQ
+        const offsetX = Math.floor(Math.random() * 5) - 2;
+        const offsetY = Math.floor(Math.random() * 5) - 2;
+        x = gameState.hqPosition.x + offsetX;
+        y = gameState.hqPosition.y + offsetY;
+        attempts++;
+        
+        // If we can't find a spot after many attempts, just place randomly
+        if (attempts > 20) {
+            x = Math.floor(Math.random() * MAP_SIZE);
+            y = Math.floor(Math.random() * MAP_SIZE);
         }
-    }
-    return { x: 0, y: 0 }; // fallback
+    } while (
+        x < 0 || x >= MAP_SIZE || 
+        y < 0 || y >= MAP_SIZE ||
+        gameState.map[y][x] === TERRAIN_TYPES.RIVER || 
+        gameState.units.some(u => u.x === x && u.y === y) ||
+        (faction === 'player' && gameState.map[y][x] === TERRAIN_TYPES.HQ)
+    );
+    
+    const unit = {
+        ...unitType,
+        x,
+        y,
+        faction,
+        hasMoved: false,
+        hasAttacked: false
+    };
+    
+    gameState.units.push(unit);
+    return unit;
 }
 
 function placeUnit(unitType, faction) {
@@ -322,7 +352,7 @@ function placeUnit(unitType, faction) {
         y < 0 || y >= MAP_SIZE ||
         gameState.map[y][x] === TERRAIN_TYPES.RIVER || 
         gameState.units.some(u => u.x === x && u.y === y) ||
-        (faction === 'player' && (gameState.map[y][x] === TERRAIN_TYPES.HQ))
+        (faction === 'player' && gameState.map[y][x] === TERRAIN_TYPES.HQ)
     );
     
     const unit = {
@@ -345,9 +375,31 @@ function renderMap() {
     for (let y = 0; y < MAP_SIZE; y++) {
         for (let x = 0; x < MAP_SIZE; x++) {
             const tile = document.createElement('div');
-            tile.className = `tile ${gameState.map[y][x]}`;
+            let tileType = gameState.map[y][x];
+            
+            // Check if base/HQ is controlled by player or enemy
+            if (tileType === TERRAIN_TYPES.BASE) {
+                const unitOnBase = gameState.units.find(u => u.x === x && u.y === y);
+                if (unitOnBase) {
+                    tileType = unitOnBase.faction === 'player' ? 'player-base' : 'enemy-base';
+                }
+            } else if (tileType === TERRAIN_TYPES.HQ) {
+                if (gameState.hqControlledBy === 'player') {
+                    tileType = 'player-HQ';
+                }
+            }
+            
+            tile.className = `tile ${tileType}`;
             tile.dataset.x = x;
             tile.dataset.y = y;
+            
+            // Add letter for base/HQ
+            if (gameState.map[y][x] === TERRAIN_TYPES.BASE) {
+                tile.textContent = 'H';
+            } else if (gameState.map[y][x] === TERRAIN_TYPES.HQ) {
+                tile.textContent = 'Q';
+            }
+            
             tile.addEventListener('click', () => handleTileClick(x, y));
             elements.map.appendChild(tile);
         }
@@ -370,13 +422,8 @@ function renderMap() {
             hpFill.className = 'hp-fill';
             hpFill.style.width = `${(unit.health / unit.maxHealth) * 100}%`;
             
-            const hpText = document.createElement('div');
-            hpText.className = 'hp-text';
-            hpText.textContent = `${unit.health}/${unit.maxHealth}`;
-            
             hpBar.appendChild(hpFill);
             unitElement.appendChild(hpBar);
-            unitElement.appendChild(hpText);
             tile.appendChild(unitElement);
             
             // Highlight selected unit
@@ -400,7 +447,7 @@ function handleTileClick(x, y) {
         // Select a unit
         if (clickedUnit && clickedUnit.faction === 'player' && !clickedUnit.hasMoved) {
             gameState.selectedUnit = clickedUnit;
-            addToLog(`Selected ${clickedUnit.name} (${clickedUnit.health}/${clickedUnit.maxHealth} HP)`);
+            addToLog(`Selected ${clickedUnit.name}`);
             updateUI();
             renderMap();
         }
@@ -414,7 +461,7 @@ function handleTileClick(x, y) {
         } else if (clickedUnit && clickedUnit.faction === 'player') {
             // Select another player unit
             gameState.selectedUnit = clickedUnit;
-            addToLog(`Selected ${clickedUnit.name} (${clickedUnit.health}/${clickedUnit.maxHealth} HP)`);
+            addToLog(`Selected ${clickedUnit.name}`);
             updateUI();
             renderMap();
         } else {
@@ -507,7 +554,24 @@ function moveUnit(unit, x, y) {
         return;
     }
     
-    // Move the unit
+    // Add smoke effect
+    const oldTile = document.querySelector(`.tile[data-x="${unit.x}"][data-y="${unit.y}"]`);
+    if (oldTile) {
+        const smoke = document.createElement('div');
+        smoke.className = 'smoke-effect';
+        oldTile.appendChild(smoke);
+        setTimeout(() => smoke.remove(), 500);
+    }
+    
+    // Move the unit with leap animation
+    const unitElement = document.querySelector(`.unit[data-unit-id="${gameState.units.indexOf(unit)}"]`);
+    if (unitElement) {
+        unitElement.style.transform = 'translateY(-20px)';
+        setTimeout(() => {
+            unitElement.style.transform = '';
+        }, 300);
+    }
+    
     const oldX = unit.x;
     const oldY = unit.y;
     unit.x = x;
@@ -516,15 +580,28 @@ function moveUnit(unit, x, y) {
     
     addToLog(`${unit.name} moved from (${oldX},${oldY}) to (${x},${y})`);
     
-    // Check if we captured a base
-    if (gameState.map[y][x] === TERRAIN_TYPES.BASE || 
-        gameState.map[y][x] === TERRAIN_TYPES.HQ) {
-        const goldGained = gameState.map[y][x] === TERRAIN_TYPES.HQ ? 10 : 5;
-        gameState.gold += goldGained;
-        addToLog(`Captured ${gameState.map[y][x] === TERRAIN_TYPES.HQ ? 'enemy HQ' : 'base'}! +${goldGained} gold`);
+    // Check if we captured a base or HQ
+    if (gameState.map[y][x] === TERRAIN_TYPES.BASE) {
+        // Check if there's an enemy unit on the base
+        const enemyOnBase = gameState.units.find(u => u.x === x && u.y === y && u.faction === 'enemy');
+        if (!enemyOnBase) {
+            // Capture base
+            addToLog(`Captured base at (${x},${y})! +1 gold per turn`);
+            gameState.playerBases++;
+        }
+    } else if (gameState.map[y][x] === TERRAIN_TYPES.HQ) {
+        // Capture HQ
+        gameState.hqControlledBy = 'player';
+        addToLog(`Captured enemy HQ at (${x},${y})!`);
         
-        // Convert HQ/base to plain after capture
-        gameState.map[y][x] = TERRAIN_TYPES.PLAIN;
+        // Add capture effect
+        const tile = document.querySelector(`.tile[data-x="${x}"][data-y="${y}"]`);
+        if (tile) {
+            const captureEffect = document.createElement('div');
+            captureEffect.className = 'capture-effect';
+            tile.appendChild(captureEffect);
+            setTimeout(() => captureEffect.remove(), 500);
+        }
     }
     
     gameState.selectedUnit = null;
@@ -549,6 +626,24 @@ function attackUnit(attacker, defender) {
     const damage = Math.max(1, attacker.attack - defender.defense);
     defender.health -= damage;
     
+    // Add blood effect
+    const defenderTile = document.querySelector(`.tile[data-x="${defender.x}"][data-y="${defender.y}"]`);
+    if (defenderTile) {
+        const blood = document.createElement('div');
+        blood.className = 'blood-effect';
+        defenderTile.appendChild(blood);
+        setTimeout(() => blood.remove(), 300);
+    }
+    
+    // Add shake effect
+    const defenderElement = document.querySelector(`.unit[data-unit-id="${gameState.units.indexOf(defender)}"]`);
+    if (defenderElement) {
+        defenderElement.style.animation = 'shake 0.3s';
+        setTimeout(() => {
+            defenderElement.style.animation = '';
+        }, 300);
+    }
+    
     addToLog(`${attacker.name} attacks ${defender.name} for ${damage} damage!`);
     
     if (defender.health <= 0) {
@@ -556,15 +651,10 @@ function attackUnit(attacker, defender) {
         gameState.units = gameState.units.filter(u => u !== defender);
         addToLog(`${defender.name} was defeated!`);
         
-        // Check if castle was captured
-        if (gameState.map[defender.y][defender.x] === TERRAIN_TYPES.BASE || 
-            gameState.map[defender.y][defender.x] === TERRAIN_TYPES.HQ) {
-            const goldGained = gameState.map[defender.y][defender.x] === TERRAIN_TYPES.HQ ? 10 : 5;
-            gameState.gold += goldGained;
-            addToLog(`Captured ${gameState.map[defender.y][defender.x] === TERRAIN_TYPES.HQ ? 'enemy HQ' : 'base'}! +${goldGained} gold`);
-            
-            // Convert HQ/base to plain after capture
-            gameState.map[defender.y][defender.x] = TERRAIN_TYPES.PLAIN;
+        // Check if we killed an enemy on a base
+        if (gameState.map[defender.y][defender.x] === TERRAIN_TYPES.BASE) {
+            gameState.playerBases++;
+            addToLog(`Captured base at (${defender.x},${defender.y})! +1 gold per turn`);
         }
     }
     
@@ -648,7 +738,6 @@ function processEnemyTurn() {
             if (closestDistance <= attackRange) {
                 // Attack
                 attackUnit(enemy, closestPlayer);
-                addToLog(`Enemy ${enemy.name} attacks ${closestPlayer.name}!`);
                 i++;
                 setTimeout(processNextEnemy, 500);
                 return;
@@ -684,10 +773,32 @@ function processEnemyTurn() {
                 
                 // Move to best position
                 if (bestX !== enemy.x || bestY !== enemy.y) {
+                    // Add smoke effect
+                    const oldTile = document.querySelector(`.tile[data-x="${enemy.x}"][data-y="${enemy.y}"]`);
+                    if (oldTile) {
+                        const smoke = document.createElement('div');
+                        smoke.className = 'smoke-effect';
+                        oldTile.appendChild(smoke);
+                        setTimeout(() => smoke.remove(), 500);
+                    }
+                    
                     enemy.x = bestX;
                     enemy.y = bestY;
                     enemy.hasMoved = true;
                     addToLog(`Enemy ${enemy.name} moves toward your units.`);
+                    
+                    // Check if enemy captured a base
+                    if (gameState.map[bestY][bestX] === TERRAIN_TYPES.BASE) {
+                        // Check if there's a player unit on the base
+                        const playerOnBase = gameState.units.find(u => u.x === bestX && u.y === bestY && u.faction === 'player');
+                        if (!playerOnBase) {
+                            // Enemy captures base
+                            gameState.enemyBases++;
+                            addToLog(`Enemy captured base at (${bestX},${bestY})!`);
+                        }
+                    }
+                    
+                    renderMap();
                 }
             }
         }
@@ -711,26 +822,38 @@ function startPlayerTurn() {
         }
     });
     
+    // Generate gold from controlled bases
+    const goldGenerated = gameState.playerBases;
+    if (goldGenerated > 0) {
+        gameState.gold += goldGenerated;
+        addToLog(`Generated ${goldGenerated} gold from controlled bases!`);
+    }
+    
+    // Spawn new enemies if HQ is not controlled by player
+    if (gameState.hqControlledBy !== 'player') {
+        gameState.enemySpawnTimer++;
+        if (gameState.enemySpawnTimer >= gameState.enemySpawnInterval) {
+            spawnNewEnemies();
+            gameState.enemySpawnTimer = 0;
+        }
+    }
+    
     addToLog(`Player Turn ${gameState.turn} begins!`);
     updateUI();
     renderMap();
 }
 
-// Game State Checks
-function checkGameEnd() {
-    const playerUnits = gameState.units.filter(u => u.faction === 'player');
-    const enemyUnits = gameState.units.filter(u => u.faction === 'enemy');
-    const hqExists = gameState.map.some(row => row.includes(TERRAIN_TYPES.HQ));
+function spawnNewEnemies() {
+    const enemyTypes = [UNIT_TYPES.SAMURAI, UNIT_TYPES.ARCHER, UNIT_TYPES.SPEAR_SAMURAI];
+    const enemiesToSpawn = 1 + Math.floor(Math.random() * 2); // 1-2 enemies
     
-    if (playerUnits.length === 0) {
-        // Player lost
-        addToLog("Game Over! All your units were defeated!");
-        setTimeout(() => alert("Defeat! All your units were defeated!"), 500);
-    } else if (enemyUnits.length === 0 && !hqExists) {
-        // Player won
-        addToLog("Victory! All enemies defeated and HQ captured!");
-        setTimeout(() => alert("Victory! You've defeated all enemies!"), 500);
+    for (let i = 0; i < enemiesToSpawn; i++) {
+        const randomEnemy = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
+        placeUnitNearHQ(randomEnemy, 'enemy');
+        addToLog(`New enemy ${randomEnemy.name} has appeared near the HQ!`);
     }
+    
+    renderMap();
 }
 
 // Unit Purchasing
@@ -745,57 +868,48 @@ function buyUnit() {
         return;
     }
     
-    // Find all bases controlled by player
-    const controlledBases = [];
-    for (let y = 0; y < MAP_SIZE; y++) {
-        for (let x = 0; x < MAP_SIZE; x++) {
-            if (gameState.map[y][x] === TERRAIN_TYPES.BASE) {
-                // Check if a player unit is on this base
-                const unitOnBase = gameState.units.find(u => u.x === x && u.y === y && u.faction === 'player');
-                if (unitOnBase) {
-                    controlledBases.push({ x, y });
-                }
-            }
+    // Find a random position away from HQ
+    let x, y;
+    let attempts = 0;
+    const hqX = gameState.hqPosition.x;
+    const hqY = gameState.hqPosition.y;
+    
+    do {
+        // Try to place near the edge (away from HQ)
+        const edge = Math.floor(Math.random() * 4);
+        switch (edge) {
+            case 0: // top
+                x = Math.floor(Math.random() * MAP_SIZE);
+                y = Math.floor(Math.random() * 2);
+                break;
+            case 1: // right
+                x = MAP_SIZE - 1 - Math.floor(Math.random() * 2);
+                y = Math.floor(Math.random() * MAP_SIZE);
+                break;
+            case 2: // bottom
+                x = Math.floor(Math.random() * MAP_SIZE);
+                y = MAP_SIZE - 1 - Math.floor(Math.random() * 2);
+                break;
+            case 3: // left
+                x = Math.floor(Math.random() * 2);
+                y = Math.floor(Math.random() * MAP_SIZE);
+                break;
         }
-    }
-    
-    if (controlledBases.length === 0) {
-        addToLog("You need to control at least one base to buy units!");
-        return;
-    }
-    
-    // Find adjacent empty tile to spawn unit
-    let spawnX, spawnY;
-    let foundSpawn = false;
-    
-    for (const base of controlledBases) {
-        // Check all 8 directions around the base
-        for (let dy = -1; dy <= 1; dy++) {
-            for (let dx = -1; dx <= 1; dx++) {
-                if (dx === 0 && dy === 0) continue; // Skip the base itself
-                
-                const x = base.x + dx;
-                const y = base.y + dy;
-                
-                if (x >= 0 && x < MAP_SIZE && y >= 0 && y < MAP_SIZE &&
-                    gameState.map[y][x] !== TERRAIN_TYPES.RIVER &&
-                    !gameState.units.some(u => u.x === x && u.y === y)) {
-                    
-                    spawnX = x;
-                    spawnY = y;
-                    foundSpawn = true;
-                    break;
-                }
-            }
-            if (foundSpawn) break;
+        
+        attempts++;
+        
+        // If we can't find a spot after many attempts, just place randomly
+        if (attempts > 20) {
+            x = Math.floor(Math.random() * MAP_SIZE);
+            y = Math.floor(Math.random() * MAP_SIZE);
         }
-        if (foundSpawn) break;
-    }
-    
-    if (!foundSpawn) {
-        addToLog("No space adjacent to your bases to spawn a new unit!");
-        return;
-    }
+    } while (
+        x < 0 || x >= MAP_SIZE || 
+        y < 0 || y >= MAP_SIZE ||
+        gameState.map[y][x] === TERRAIN_TYPES.RIVER || 
+        gameState.units.some(u => u.x === x && u.y === y) ||
+        (Math.abs(x - hqX) < 3 && Math.abs(y - hqY) < 3) // Don't spawn too close to HQ
+    );
     
     // Deduct gold
     gameState.gold -= 5;
@@ -809,14 +923,50 @@ function buyUnit() {
     ];
     const randomUnitType = availableUnits[Math.floor(Math.random() * availableUnits.length)];
     
-    const newUnit = placeUnit(randomUnitType, 'player');
-    newUnit.x = spawnX;
-    newUnit.y = spawnY;
+    const newUnit = {
+        ...randomUnitType,
+        x,
+        y,
+        faction: 'player',
+        hasMoved: true, // Can't move after buying
+        hasAttacked: false
+    };
     
-    addToLog(`Purchased new ${newUnit.name} for 5 gold at (${spawnX},${spawnY})`);
+    gameState.units.push(newUnit);
+    
+    // Add spawn effect
+    const tile = document.querySelector(`.tile[data-x="${x}"][data-y="${y}"]`);
+    if (tile) {
+        const smoke = document.createElement('div');
+        smoke.className = 'smoke-effect';
+        tile.appendChild(smoke);
+        setTimeout(() => smoke.remove(), 500);
+    }
+    
+    addToLog(`Purchased new ${newUnit.name} for 5 gold at (${x},${y})`);
     
     updateUI();
     renderMap();
+}
+
+// Game State Checks
+function checkGameEnd() {
+    const playerUnits = gameState.units.filter(u => u.faction === 'player');
+    const enemyUnits = gameState.units.filter(u => u.faction === 'enemy');
+    
+    // Win condition: Control HQ and no enemy units left
+    if (gameState.hqControlledBy === 'player' && enemyUnits.length === 0) {
+        addToLog("Victory! You've captured the HQ and defeated all enemies!");
+        setTimeout(() => alert("Victory! You've captured the HQ and defeated all enemies!"), 500);
+        return;
+    }
+    
+    // Lose condition: No player units left
+    if (playerUnits.length === 0) {
+        addToLog("Game Over! All your units were defeated!");
+        setTimeout(() => alert("Defeat! All your units were defeated!"), 500);
+        return;
+    }
 }
 
 // UI Updates
@@ -832,7 +982,7 @@ function updateUI() {
         const unit = gameState.selectedUnit;
         elements.selectedUnitInfo.innerHTML = `
             <strong>${unit.name}</strong><br>
-            HP: ${unit.health}/${unit.maxHealth}<br>
+            HP: <div class="hp-bar"><div class="hp-fill" style="width: ${(unit.health / unit.maxHealth) * 100}%"></div></div>
             Attack: ${unit.attack}<br>
             Defense: ${unit.defense}<br>
             Movement: ${unit.movement}<br>
