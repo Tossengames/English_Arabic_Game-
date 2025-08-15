@@ -1,157 +1,17 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Samurai Tactics</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f0f0f0;
-            touch-action: manipulation;
-        }
-        
-        #game-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            max-width: 100%;
-            overflow: auto;
-        }
-        
-        #game-board {
-            display: grid;
-            gap: 2px;
-            margin-bottom: 20px;
-            background-color: #333;
-            padding: 5px;
-            border-radius: 5px;
-        }
-        
-        .cell {
-            width: 40px;
-            height: 40px;
-            background-color: #8bc34a;
-            position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            font-size: 10px;
-            user-select: none;
-        }
-        
-        .base {
-            background-color: #8B4513; /* Brown */
-        }
-        
-        .castle {
-            background-color: #000; /* Black */
-            border: 2px solid #ffd700;
-        }
-        
-        .unit {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            font-weight: bold;
-            font-size: 8px;
-            position: relative;
-            z-index: 2;
-        }
-        
-        .player-unit {
-            background-color: #2196F3; /* Blue */
-            border: 2px solid #0d47a1;
-        }
-        
-        .enemy-unit {
-            background-color: #f44336; /* Red */
-            border: 2px solid #b71c1c;
-        }
-        
-        .hp-display {
-            position: absolute;
-            bottom: -15px;
-            font-size: 10px;
-            color: white;
-            background-color: rgba(0, 0, 0, 0.7);
-            padding: 0 3px;
-            border-radius: 3px;
-            z-index: 3;
-        }
-        
-        #unit-info {
-            margin-top: 20px;
-            padding: 10px;
-            background-color: white;
-            border-radius: 5px;
-            width: 300px;
-            max-width: 100%;
-        }
-        
-        #action-menu {
-            position: absolute;
-            background-color: white;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            padding: 5px;
-            z-index: 10;
-            display: none;
-        }
-        
-        .action-btn {
-            display: block;
-            width: 100%;
-            padding: 5px;
-            margin: 2px 0;
-            background-color: #f0f0f0;
-            border: none;
-            border-radius: 3px;
-            cursor: pointer;
-        }
-        
-        .action-btn:hover {
-            background-color: #ddd;
-        }
-        
-        #end-turn-btn {
-            padding: 10px 20px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-top: 10px;
-            font-size: 16px;
-        }
-        
-        .movement-range {
-            background-color: rgba(100, 255, 100, 0.3);
-        }
-        
-        .attack-range {
-            background-color: rgba(255, 100, 100, 0.3);
-        }
-        
-        .selected-unit {
-            box-shadow: 0 0 0 3px yellow;
-        }
-    </style>
+    <title>Shinobi Tactics</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="game-container">
-        <h1>Samurai Tactics</h1>
-        <div id="game-board"></div>
-        <div id="unit-info">Select a unit to see details</div>
-        <button id="end-turn-btn">End Turn</button>
-        <div id="action-menu"></div>
+        <div id="map"></div>
+        <div id="info-panel">
+            <div>Selected: <span id="selected-unit">None</span></div>
+            <div>Action: <span id="current-action">Select a unit</span></div>
+            <div>Gold: <span id="gold">0</span></div>
+        </div>
     </div>
     <script src="game.js"></script>
 </body>
