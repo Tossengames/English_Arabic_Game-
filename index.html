@@ -1,18 +1,47 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shinobi Tactics</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="game-container">
-        <div id="map"></div>
-        <div id="info-panel">
-            <div>Selected: <span id="selected-unit">None</span></div>
-            <div>Action: <span id="current-action">Select a unit</span></div>
-            <div>Gold: <span id="gold">0</span></div>
+        <div id="header">
+            <h1>Shinobi Tactics</h1>
+            <div id="game-info">
+                <div>Turn: <span id="turn-counter">1</span></div>
+                <div>Gold: <span id="gold">0</span></div>
+                <div>Phase: <span id="game-phase">Player Turn</span></div>
+            </div>
+        </div>
+        
+        <div id="main-content">
+            <div id="map-container">
+                <div id="map"></div>
+            </div>
+            
+            <div id="side-panel">
+                <div id="unit-info">
+                    <h3>Selected Unit</h3>
+                    <div id="selected-unit-info">None selected</div>
+                </div>
+                
+                <div id="actions-panel">
+                    <h3>Actions</h3>
+                    <button id="end-turn-btn">End Turn</button>
+                    <button id="buy-unit-btn">Buy Unit (5 gold)</button>
+                </div>
+                
+                <div id="combat-log">
+                    <h3>Combat Log</h3>
+                    <div id="log-entries"></div>
+                </div>
+            </div>
         </div>
     </div>
+    
     <script src="game.js"></script>
 </body>
 </html>
