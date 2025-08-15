@@ -1,0 +1,60 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+    margin: 0;
+    padding: 20px;
+}
+
+#game-container {
+    display: flex;
+}
+
+#map {
+    display: grid;
+    grid-template-columns: repeat(10, 50px);
+    grid-template-rows: repeat(10, 50px);
+    gap: 2px;
+}
+
+.tile {
+    width: 50px;
+    height: 50px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+}
+
+.plain { background-color: #a9d18e; }
+.forest { background-color: #2e7d32; color: white; }
+.river { background-color: #5b9bd5; color: white; }
+.castle { background-color: #c55a11; color: white; }
+
+.unit {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    color: white;
+    cursor: pointer;
+}
+
+.player-unit { border: 2px solid blue; }
+.enemy-unit { border: 2px solid red; }
+
+.highlight-move { background-color: rgba(0, 255, 0, 0.3); }
+.highlight-attack { background-color: rgba(255, 0, 0, 0.3); }
+
+#info-panel {
+    margin-left: 20px;
+    padding: 10px;
+    background-color: white;
+    border-radius: 5px;
+    width: 200px;
+}
