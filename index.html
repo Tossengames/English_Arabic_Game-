@@ -3,55 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shinobi Tactics</title>
+    <title>Ancient Empires Clone</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="difficulty-selector">
-        <div id="difficulty-box">
-            <h2>Select Difficulty</h2>
-            <p>Choose how challenging the game will be:</p>
-            <button class="difficulty-btn" data-difficulty="easy">Easy</button>
-            <button class="difficulty-btn" data-difficulty="normal">Normal</button>
-            <button class="difficulty-btn" data-difficulty="hard">Hard</button>
-        </div>
-    </div>
-
-    <div id="game-container">
-        <div id="header">
-            <h1>Shinobi Tactics</h1>
-            <div id="game-info">
-                <div>Turn: <span id="turn-counter">1</span></div>
-                <div>Gold: <span id="gold">0</span></div>
-                <div>Phase: <span id="game-phase">Player Turn</span></div>
+    <div class="game-container">
+        <div class="game-header">
+            <h1>Ancient Empires</h1>
+            <div class="game-info">
+                <div id="current-player">Player Turn</div>
+                <div id="game-state">Move your units</div>
+                <button id="end-turn">End Turn</button>
             </div>
         </div>
         
-        <div id="main-content">
-            <div id="map-container">
-                <div id="map"></div>
+        <div class="game-main">
+            <div class="game-map-container">
+                <canvas id="game-map"></canvas>
             </div>
             
-            <div id="side-panel">
-                <div id="unit-info">
-                    <h3>Selected Unit</h3>
-                    <div id="selected-unit-info">None selected</div>
-                </div>
-                
-                <div id="actions-panel">
-                    <h3>Actions</h3>
-                    <button id="end-turn-btn">End Turn</button>
-                    <button id="buy-unit-btn">Buy Unit (5 gold)</button>
-                </div>
-                
-                <div id="combat-log">
-                    <h3>Combat Log</h3>
-                    <div id="log-entries"></div>
+            <div class="game-sidebar">
+                <div class="unit-info" id="unit-info">
+                    <h3>Unit Info</h3>
+                    <p>Select a unit to view details</p>
+                    <div class="unit-stats">
+                        <p>Type: <span id="unit-type">-</span></p>
+                        <p>Health: <span id="unit-health">-</span></p>
+                        <p>Attack: <span id="unit-attack">-</span></p>
+                        <p>Movement: <span id="unit-movement">-</span></p>
+                    </div>
+                    <div class="unit-actions" id="unit-actions">
+                        <!-- Actions will appear here when unit is selected -->
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-    
-    <script src="game.js"></script>
+
+    <script src="script.js"></script>
 </body>
 </html>
