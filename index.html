@@ -13,6 +13,10 @@
             <div class="game-info">
                 <div id="current-player">Player Turn</div>
                 <div id="game-state">Move your units</div>
+                <div class="resources">
+                    <span>Gold: <span id="gold-amount">100</span></span>
+                    <span>Turn: <span id="turn-count">1</span></span>
+                </div>
                 <button id="end-turn">End Turn</button>
             </div>
         </div>
@@ -30,11 +34,16 @@
                         <p>Type: <span id="unit-type">-</span></p>
                         <p>Health: <span id="unit-health">-</span></p>
                         <p>Attack: <span id="unit-attack">-</span></p>
+                        <p>Range: <span id="unit-range">-</span></p>
                         <p>Movement: <span id="unit-movement">-</span></p>
                     </div>
                     <div class="unit-actions" id="unit-actions">
                         <!-- Actions will appear here when unit is selected -->
                     </div>
+                </div>
+                <div class="game-log" id="game-log">
+                    <h3>Battle Log</h3>
+                    <div class="log-entries" id="log-entries"></div>
                 </div>
             </div>
         </div>
