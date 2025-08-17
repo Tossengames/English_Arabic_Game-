@@ -151,3 +151,96 @@ body {
 .tile-fog {
     background-color: rgba(0, 0, 0, 0.7);
 }
+
+/* [Previous CSS remains the same, add these new styles] */
+
+.resources {
+    display: flex;
+    gap: 15px;
+    margin-right: 20px;
+    font-weight: bold;
+}
+
+.game-log {
+    margin-top: 20px;
+    background-color: #2c3e50;
+    padding: 10px;
+    border-radius: 5px;
+    color: white;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.log-entries {
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.log-entry {
+    margin-bottom: 5px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #34495e;
+}
+
+.tile-wall {
+    background-color: #333;
+}
+
+.tile-castle {
+    background-color: #f1c40f;
+}
+
+.tile-base {
+    background-color: #9b59b6;
+}
+
+.tile-village {
+    background-color: #e67e22;
+}
+
+/* Animation classes */
+.unit-moving {
+    transition: all 0.3s ease-out;
+}
+
+.unit-attacking {
+    animation: attackAnimation 0.3s;
+}
+
+@keyframes attackAnimation {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+.damage-effect {
+    position: absolute;
+    color: red;
+    font-weight: bold;
+    animation: damageFade 1s forwards;
+}
+
+@keyframes damageFade {
+    0% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-20px); }
+}
+
+.action-btn {
+    margin: 5px 0;
+    padding: 8px;
+    width: 100%;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.action-btn:hover {
+    background-color: #2980b9;
+}
+
+.action-btn:disabled {
+    background-color: #7f8c8d;
+    cursor: not-allowed;
+}
