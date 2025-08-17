@@ -3,52 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ancient Empires Clone</title>
+    <title>Clan of Shadows</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="game-container">
         <div class="game-header">
-            <h1>Ancient Empires</h1>
-            <div class="game-info">
-                <div id="current-player">Player Turn</div>
-                <div id="game-state">Move your units</div>
-                <div class="resources">
-                    <span>Gold: <span id="gold-amount">100</span></span>
-                    <span>Turn: <span id="turn-count">1</span></span>
-                </div>
-                <button id="end-turn">End Turn</button>
+            <h1>Clan of Shadows</h1>
+            <div class="mission-info">
+                <h2 id="mission-title">Mission 1: Castle Infiltration</h2>
+                <p id="mission-objective">Objective: Eliminate all enemy units</p>
+                <div class="turn-indicator" id="turn-indicator">Your Turn</div>
             </div>
         </div>
         
-        <div class="game-main">
-            <div class="game-map-container">
-                <canvas id="game-map"></canvas>
+        <div class="game-board" id="game-board"></div>
+        
+        <div class="unit-info" id="unit-info">
+            <div class="unit-info-header">Unit Information</div>
+            <div class="unit-info-content">
+                <p>Select a unit to see details</p>
             </div>
-            
-            <div class="game-sidebar">
-                <div class="unit-info" id="unit-info">
-                    <h3>Unit Info</h3>
-                    <p>Select a unit to view details</p>
-                    <div class="unit-stats">
-                        <p>Type: <span id="unit-type">-</span></p>
-                        <p>Health: <span id="unit-health">-</span></p>
-                        <p>Attack: <span id="unit-attack">-</span></p>
-                        <p>Range: <span id="unit-range">-</span></p>
-                        <p>Movement: <span id="unit-movement">-</span></p>
-                    </div>
-                    <div class="unit-actions" id="unit-actions">
-                        <!-- Actions will appear here when unit is selected -->
-                    </div>
-                </div>
-                <div class="game-log" id="game-log">
-                    <h3>Battle Log</h3>
-                    <div class="log-entries" id="log-entries"></div>
-                </div>
-            </div>
+        </div>
+        
+        <div class="controls">
+            <button id="end-turn-btn">End Turn</button>
+            <button id="restart-btn">Restart Mission</button>
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="missions.js"></script>
+    <script src="game.js"></script>
 </body>
 </html>
