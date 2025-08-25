@@ -1,38 +1,64 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clan of Shadows</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ninja Village Defense — Single Player</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    <div class="game-container">
-        <div class="game-header">
-            <h1>Clan of Shadows</h1>
-            <div class="mission-info">
-                <h2 id="mission-title">Mission 1: Castle Infiltration</h2>
-                <p id="mission-objective">Objective: Eliminate all enemy units</p>
-                <div class="turn-indicator" id="turn-indicator">Your Turn</div>
-            </div>
-        </div>
-        
-        <div class="game-board" id="game-board"></div>
-        
-        <div class="unit-info" id="unit-info">
-            <div class="unit-info-header">Unit Information</div>
-            <div class="unit-info-content">
-                <p>Select a unit to see details</p>
-            </div>
-        </div>
-        
-        <div class="controls">
-            <button id="end-turn-btn">End Turn</button>
-            <button id="restart-btn">Restart Mission</button>
-        </div>
-    </div>
+  <canvas id="game" width="960" height="540"></canvas>
 
-    <script src="missions.js"></script>
-    <script src="game.js"></script>
+  <!-- HUD -->
+  <div id="hud">
+    <div id="left">
+      <div id="playerName"></div>
+      <div class="bar hp"><span id="hpFill"></span></div>
+      <div class="stats">
+        ATK: <span id="atk"></span> • DEF: <span id="def"></span> • HEAL: <span id="heal"></span> • FIX: <span id="fix"></span>
+      </div>
+      <div class="wave">Wave: <span id="wave"></span> • Enemies Left: <span id="enemiesLeft"></span></div>
+    </div>
+    <div id="right">
+      <button id="contextBtn">Action</button>
+    </div>
+  </div>
+
+  <!-- Touch Controls -->
+  <div id="controls">
+    <div class="row">
+      <div class="btn dir" data-dir="up">⬆️</div>
+    </div>
+    <div class="row">
+      <div class="btn dir" data-dir="left">⬅️</div>
+      <div class="btn dir" data-dir="down">⬇️</div>
+      <div class="btn dir" data-dir="right">➡️</div>
+    </div>
+    <div class="row">
+      <div class="btn action" id="touchAction">⚔️</div>
+    </div>
+  </div>
+
+  <!-- Overlay (start/gameover) -->
+  <div id="overlay" class="show">
+    <div class="panel">
+      <h1>🥷 Ninja Village Defense</h1>
+      <p>Single player with AI companions</p>
+      <label>Your name:
+        <input id="nameInput" maxlength="16" placeholder="ShadowFox" />
+      </label>
+      <div class="pt">Distribute 10 points</div>
+      <div class="pts">
+        <label>ATK <input type="number" id="atkInput" min="0" max="10" value="4"></label>
+        <label>DEF <input type="number" id="defInput" min="0" max="10" value="2"></label>
+        <label>HEAL <input type="number" id="healInput" min="0" max="10" value="2"></label>
+        <label>FIX <input type="number" id="fixInput" min="0" max="10" value="2"></label>
+      </div>
+      <button id="startBtn">Start</button>
+      <small>Controls: WASD/Arrows to move • Space = Action • R = Repair • E = Heal teammate</small>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
 </body>
 </html>
