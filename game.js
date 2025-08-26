@@ -1,620 +1,648 @@
-/* Ninja Village Defense — Single Player (HTML5 Canvas)
-   - Player + 2 AI companions
-   - Enemies attack gates; if gate breaks they go for bases
-   - Context action: Attack enemy / Repair gate or base / Heal teammate
-   - Random boosts: ATK/DEF/HEALTH/FIX
-   - Lose: all ninjas down OR all bases destroyed
-   - Win: survive all waves
-*/
+// Ninja Shogi — single-file game logic
+// Drop in index.html + style.css and it runs in browser (PC & mobile)
 
 (() => {
-  // ===== Canvas & UI =====
-  const canvas = document.getElementById('game');
-  const ctx = canvas.getContext('2d');
+  // Config
+  const BOARD_N = 8;
+  const CANVAS = document.getElementById('board');
+  const ctx = CANVAS.getContext('2d');
+  const STATUS = document.getElementById('status');
+  const PLAYER_HAND_EL = document.getElementById('playerHand');
+  const ENEMY_HAND_EL = document.getElementById('enemyHand');
+  const BTN_RESTART = document.getElementById('btnRestart');
 
-  // HUD elements
-  const elName = document.getElementById('playerName');
-  const elHp = document.getElementById('hpFill');
-  const elAtk = document.getElementById('atk');
-  const elDef = document.getElementById('def');
-  const elHeal = document.getElementById('heal');
-  const elFix = document.getElementById('fix');
-  const elWave = document.getElementById('wave');
-  const elEnemiesLeft = document.getElementById('enemiesLeft');
-  const contextBtn = document.getElementById('contextBtn');
+  const cellSize = CANVAS.width / BOARD_N;
+  const playerSide = 'player';
+  const enemySide = 'enemy';
 
-  // Overlay
-  const overlay = document.getElementById('overlay');
-  const startBtn = document.getElementById('startBtn');
-  const nameInput = document.getElementById('nameInput');
-  const atkInput = document.getElementById('atkInput');
-  const defInput = document.getElementById('defInput');
-  const healInput = document.getElementById('healInput');
-  const fixInput = document.getElementById('fixInput');
-
-  // Touch controls
-  const dirBtns = document.querySelectorAll('.btn.dir');
-  const touchAction = document.getElementById('touchAction');
-
-  // ===== Game Config =====
-  const W = canvas.width, H = canvas.height;
-  const PLAYER_COUNT = 1;
-  const COMPANIONS = 2; // AI teammates
-  const GATES = 3;
-  const BASES = 3;
-  const BOOST_INTERVAL = 6000; // ms
-  const WAVE_COUNT = 8;
-  const WAVE_ENEMIES_BASE = 6;
-
-  const COLORS = {
-    player: '#68e1fd',
-    companion: '#49f27a',
-    enemy: '#ff5959',
-    gate: '#c08a3e',
-    base: '#6cc070',
-    text: '#e6e6e6',
-    hpRed: '#ff4040',
-    hpGreen: '#2ecc71',
-    fix: '#ffd166'
-  };
-
-  // ===== Helpers =====
-  const rand = (min, max) => Math.random() * (max - min) + min;
-  const randi = (min, max) => Math.floor(rand(min, max + 1));
-  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  const dist2 = (a, b) => { const dx=a.x-b.x, dy=a.y-b.y; return dx*dx + dy*dy; };
-  const dist = (a, b) => Math.hypot(a.x-b.x, a.y-b.y);
-
-  // ===== Entities =====
-  class Unit {
-    constructor(x, y, name, stats, isPlayer=false) {
-      this.x=x; this.y=y;
-      this.r=12;
-      this.name=name;
-      this.maxHp=100; this.hp=this.maxHp;
-      this.atk=stats.atk; this.def=stats.def; this.heal=stats.heal; this.fix=stats.fix;
-      this.speed=2.4;
-      this.isPlayer=isPlayer;
-      this.dead=false;
-      this.actionCd=0;
-    }
-    step(dt) {
-      this.actionCd = Math.max(0, this.actionCd - dt);
-      if (this.hp<=0) { this.dead=true; }
-    }
-    draw() {
-      // body
-      ctx.fillStyle = this.isPlayer ? COLORS.player : COLORS.companion;
-      if (this.dead) ctx.fillStyle = '#555';
-      ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, Math.PI*2); ctx.fill();
-
-      // name
-      ctx.fillStyle = COLORS.text;
-      ctx.font = '12px sans-serif';
-      ctx.textAlign='center';
-      ctx.fillText(this.name, this.x, this.y - this.r - 8);
-
-      // hp bar
-      const w=26, h=4;
-      ctx.fillStyle = '#00000088';
-      ctx.fillRect(this.x - w/2, this.y + this.r + 4, w, h);
-      const ratio = clamp(this.hp/this.maxHp, 0, 1);
-      ctx.fillStyle = COLORS.hpGreen;
-      if (ratio < 0.4) ctx.fillStyle = COLORS.hpRed;
-      ctx.fillRect(this.x - w/2, this.y + this.r + 4, w*ratio, h);
-    }
+  // Piece definitions
+  // Each piece: id, name, side, value (AI heuristics), movement generator function
+  function pieceDef(id, name, value, movesFunc, options = {}) {
+    return { id, name, value, movesFunc, ...options };
   }
 
-  class Enemy {
-    constructor(x, y, wave) {
-      this.x=x; this.y=y; this.r=11;
-      this.maxHp = 45 + wave*10; this.hp = this.maxHp;
-      this.atk = 3 + Math.floor(wave/2);
-      this.speed = 1.2 + wave*0.05;
-      this.targetGate=null; this.targetBase=null;
-      this.dead=false;
-    }
-    step(dt, gates, bases) {
-      if (this.hp<=0) { this.dead=true; return; }
+  // Simple helper to clone board & coords
+  const inside = (x,y) => x>=0 && x<BOARD_N && y>=0 && y<BOARD_N;
 
-      // acquire targets
-      if (!this.targetGate || this.targetGate.hp<=0) {
-        // find closest alive gate
-        const aliveG = gates.filter(g=>g.hp>0);
-        if (aliveG.length) {
-          this.targetGate = aliveG.reduce((best,g)=> dist(this, g) < dist(this,best)? g: best, aliveG[0]);
-        } else {
-          this.targetGate = null;
-        }
+  // Movement generators return arrays of coordinates {x,y,range}
+  // Range: optional, used for some moves; for capture rules we handle in code.
+  const moves = {
+    king: (x,y,side,board)=> {
+      const out=[];
+      for(let dx=-1;dx<=1;dx++) for(let dy=-1;dy<=1;dy++){
+        if(dx===0 && dy===0) continue;
+        const nx=x+dx, ny=y+dy;
+        if(inside(nx,ny)) out.push({x:nx,y:ny});
       }
-      if (!this.targetGate && !this.targetBase) {
-        const aliveB = bases.filter(b=>b.hp>0);
-        if (aliveB.length) {
-          this.targetBase = aliveB[randi(0, aliveB.length-1)];
-        }
-      }
-
-      // move/attack
-      let target = this.targetGate || this.targetBase;
-      if (!target) return;
-      const d = dist(this, target);
-      if (d > this.r + target.r + 2) {
-        const dx = (target.x - this.x) / d;
-        const dy = (target.y - this.y) / d;
-        this.x += dx * this.speed * dt*0.06;
-        this.y += dy * this.speed * dt*0.06;
-      } else {
-        // attack structure
-        target.hp -= this.atk * dt*0.02;
-      }
-    }
-    draw() {
-      ctx.fillStyle = COLORS.enemy;
-      ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, Math.PI*2); ctx.fill();
-
-      // hp bar
-      const w=22, h=3;
-      ctx.fillStyle = '#00000088';
-      ctx.fillRect(this.x - w/2, this.y + this.r + 3, w, h);
-      const ratio = clamp(this.hp/this.maxHp, 0, 1);
-      ctx.fillStyle = ratio<0.4 ? COLORS.hpRed : COLORS.hpGreen;
-      ctx.fillRect(this.x - w/2, this.y + this.r + 3, w*ratio, h);
-    }
-  }
-
-  class Structure {
-    constructor(x,y, type) {
-      this.x=x; this.y=y;
-      this.type=type; // 'gate' or 'base'
-      this.r = type==='gate'? 14 : 18;
-      this.maxHp = type==='gate'? 140 : 220;
-      this.hp = this.maxHp;
-    }
-    draw() {
-      ctx.fillStyle = this.type==='gate'? COLORS.gate : COLORS.base;
-      ctx.beginPath(); ctx.rect(this.x-18, this.y-12, 36, 24); ctx.fill();
-
-      // hp bar
-      const w=36, h=5;
-      ctx.fillStyle='#00000088'; ctx.fillRect(this.x-w/2, this.y-20, w, h);
-      const ratio = clamp(this.hp/this.maxHp,0,1);
-      ctx.fillStyle = ratio<0.4? COLORS.hpRed : COLORS.hpGreen;
-      ctx.fillRect(this.x-w/2, this.y-20, w*ratio, h);
-
-      ctx.fillStyle = '#ddd';
-      ctx.font='11px sans-serif'; ctx.textAlign='center';
-      ctx.fillText(this.type.toUpperCase(), this.x, this.y+22);
-    }
-  }
-
-  class Boost {
-    constructor(x,y,type) {
-      this.x=x; this.y=y; this.r=10; this.type=type; // 'atk','def','heal','fix','hp'
-      this.ttl = 15000; // ms
-    }
-    step(dt){ this.ttl -= dt; }
-    draw() {
-      const map = { atk:'#ff9f1c', def:'#2ec4b6', heal:'#9b5de5', fix:'#ffd166', hp:'#ef476f' };
-      ctx.fillStyle = map[this.type] || '#ccc';
-      ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle='#111'; ctx.font='bold 11px sans-serif'; ctx.textAlign='center';
-      ctx.fillText(this.type.toUpperCase(), this.x, this.y+4);
-    }
-  }
-
-  // ===== World/State =====
-  const state = {
-    started:false,
-    over:false,
-    wave:0,
-    enemies:[],
-    ninjas:[],
-    gates:[],
-    bases:[],
-    boosts:[],
-    spawnTimer:0,
-    nextWaveTimer:2000,
-    enemiesToSpawn:0
-  };
-
-  // ===== Input =====
-  const input = { up:false, down:false, left:false, right:false };
-  const setDir = (dir, val)=>{ input[dir]=val; };
-
-  // keyboard
-  window.addEventListener('keydown', e=>{
-    if (e.key==='ArrowUp'||e.key==='w') setDir('up', true);
-    if (e.key==='ArrowDown'||e.key==='s') setDir('down', true);
-    if (e.key==='ArrowLeft'||e.key==='a') setDir('left', true);
-    if (e.key==='ArrowRight'||e.key==='d') setDir('right', true);
-    if (e.key===' ') doContextAction();
-    if (e.key==='r') doRepair();
-    if (e.key==='e') doHeal();
-  });
-  window.addEventListener('keyup', e=>{
-    if (e.key==='ArrowUp'||e.key==='w') setDir('up', false);
-    if (e.key==='ArrowDown'||e.key==='s') setDir('down', false);
-    if (e.key==='ArrowLeft'||e.key==='a') setDir('left', false);
-    if (e.key==='ArrowRight'||e.key==='d') setDir('right', false);
-  });
-
-  // touch
-  dirBtns.forEach(btn=>{
-    const dir = btn.dataset.dir;
-    const on = ()=> setDir(dir, true);
-    const off = ()=> setDir(dir, false);
-    btn.addEventListener('touchstart', on); btn.addEventListener('mousedown', on);
-    btn.addEventListener('touchend', off); btn.addEventListener('mouseup', off);
-    btn.addEventListener('mouseleave', off);
-  });
-  touchAction.addEventListener('touchstart', ()=> doContextAction());
-  touchAction.addEventListener('mousedown', ()=> doContextAction());
-  contextBtn.addEventListener('click', ()=> doContextAction());
-
-  // ===== Setup =====
-  function randomPlacements(count, margin=40) {
-    const pts=[];
-    for (let i=0;i<count;i++){
-      pts.push({x: rand(margin, W-margin), y: rand(margin, H-margin)});
-    }
-    return pts;
-  }
-
-  function startGame() {
-    // validate stats: sum 10
-    const atk = Number(atkInput.value|0), def = Number(defInput.value|0), heal = Number(healInput.value|0), fix = Number(fixInput.value|0);
-    const sum = atk+def+heal+fix;
-    if (sum !== 10) {
-      alert('Please distribute exactly 10 points across ATK/DEF/HEAL/FIX.');
-      return;
-    }
-    const pname = (nameInput.value || 'ShadowFox').slice(0,16);
-
-    // world
-    state.gates = randomPlacements(GATES).map(p => new Structure(p.x,p.y,'gate'));
-    state.bases = randomPlacements(BASES).map(p => new Structure(p.x,p.y,'base'));
-
-    // ninjas: player + companions with slight variance
-    const player = new Unit(W*0.5, H*0.6, pname, {atk,def,heal,fix}, true);
-    state.ninjas = [player];
-
-    for (let i=0;i<COMPANIONS;i++) {
-      const tweak = () => Math.max(1, Math.min(6, Math.round(rand(-1,1)+2)));
-      const c = new Unit(player.x+rand(-60,60), player.y+rand(-60,60), `Ally${i+1}`, {
-        atk: Math.max(1, atk + randi(-1,1)),
-        def: Math.max(1, def + randi(-1,1)),
-        heal: Math.max(1, heal + randi(-1,1)),
-        fix: Math.max(1, fix + randi(-1,1)),
-      }, false);
-      state.ninjas.push(c);
-    }
-
-    overlay.classList.remove('show');
-    state.started = true; state.over=false; state.wave=0;
-    nextWave();
-    updateHUD();
-  }
-
-  // ===== Actions =====
-  function nearest(list, from, radius=40) {
-    let best=null, bestD=Infinity;
-    list.forEach(o=>{
-      const d = dist(from,o);
-      if (d<radius && d<bestD) { best=o; bestD=d; }
-    });
-    return best;
-  }
-
-  function doAttack(attacker, target) {
-    if (!target || attacker.actionCd>0 || attacker.dead) return;
-    const dmg = Math.max(1, attacker.atk - 0.3*(target.def||0));
-    target.hp -= dmg;
-    attacker.actionCd = 350; // ms
-  }
-
-  function doRepair() {
-    const me = state.ninjas[0];
-    const target = nearest([...state.gates, ...state.bases].filter(s=>s.hp>0 && s.hp<s.maxHp), me, 42);
-    if (!target || me.actionCd>0 || me.dead) return;
-    target.hp = clamp(target.hp + (4 + me.fix*1.2), 0, target.maxHp);
-    me.actionCd = 300;
-  }
-
-  function doHeal() {
-    const me = state.ninjas[0];
-    const ally = nearest(state.ninjas.filter(n=>!n.dead && n!==me && n.hp< n.maxHp), me, 42);
-    if (!ally || me.actionCd>0 || me.dead) return;
-    ally.hp = clamp(ally.hp + (5 + me.heal*1.5), 0, ally.maxHp);
-    me.actionCd = 350;
-  }
-
-  function doContextAction() {
-    const me = state.ninjas[0];
-    if (me.dead) return;
-
-    // priority: attack enemy in range
-    let targetE = nearest(state.enemies.filter(e=>!e.dead), me, 40);
-    if (targetE) { doAttack(me, targetE); return; }
-
-    // then heal ally
-    let ally = nearest(state.ninjas.filter(n=>n!==me && !n.dead && n.hp< n.maxHp), me, 42);
-    if (ally) { doHeal(); return; }
-
-    // then repair structure
-    let structure = nearest([...state.gates, ...state.bases].filter(s=>s.hp>0 && s.hp<s.maxHp), me, 42);
-    if (structure) { doRepair(); return; }
-  }
-
-  // ===== AI =====
-  function companionAI(n, dt) {
-    if (n.dead) return;
-
-    // if low hp and near player with heal, move towards player
-    const player = state.ninjas[0];
-    // decide need
-    const damagedGate = state.gates.find(g=>g.hp>0 && g.hp<g.maxHp);
-    const threatenedGate = damagedGate || state.gates.find(g=> state.enemies.some(e=> e.targetGate===g));
-    const aliveEnemies = state.enemies.filter(e=>!e.dead);
-
-    // target selection: nearest enemy if close, else fix/repair, else follow player
-    let target = null;
-    // heal nearby ally if very low
-    const lowAlly = state.ninjas.find(x => !x.dead && x.hp < x.maxHp*0.5 && dist(x,n) < 80);
-    if (lowAlly && n.heal >= 2) {
-      // move to ally
-      target = lowAlly;
-      moveTowards(n, target, n.speed, dt);
-      if (dist(n, target) < 36) {
-        // heal
-        if (n.actionCd<=0) {
-          target.hp = clamp(target.hp + (4 + n.heal*1.2), 0, target.maxHp);
-          n.actionCd=350;
-        }
-      }
-      return;
-    }
-
-    // attack if enemy in perception
-    const nearEnemy = aliveEnemies.sort((a,b)=> dist(n,a)-dist(n,b))[0];
-    if (nearEnemy && dist(n, nearEnemy) < 160) {
-      moveTowards(n, nearEnemy, n.speed*1.05, dt);
-      if (dist(n, nearEnemy) < (n.r + nearEnemy.r + 2)) {
-        if (n.actionCd<=0) {
-          doAttack(n, nearEnemy);
-        }
-      }
-      return;
-    }
-
-    // repair if structure damaged
-    if (threatenedGate && n.fix >= 2) {
-      moveTowards(n, threatenedGate, n.speed, dt);
-      if (dist(n, threatenedGate) < (n.r + threatenedGate.r + 16)) {
-        if (n.actionCd<=0) {
-          threatenedGate.hp = clamp(threatenedGate.hp + (3 + n.fix), 0, threatenedGate.maxHp);
-          n.actionCd=320;
-        }
-      }
-      return;
-    }
-
-    // follow player loosely
-    const d = dist(n, player);
-    if (d > 60) {
-      moveTowards(n, player, n.speed*0.9, dt);
-    }
-  }
-
-  function moveTowards(n, target, speed, dt) {
-    const d = dist(n, target);
-    if (d < 1) return;
-    const dx = (target.x - n.x)/d;
-    const dy = (target.y - n.y)/d;
-    n.x += dx * speed * dt*0.06;
-    n.y += dy * speed * dt*0.06;
-  }
-
-  // ===== Waves =====
-  function nextWave() {
-    state.wave++;
-    if (state.wave > WAVE_COUNT) {
-      gameOver(true);
-      return;
-    }
-    const count = WAVE_ENEMIES_BASE + Math.floor(state.wave*1.5);
-    state.enemiesToSpawn = count;
-    state.spawnTimer = 0;
-    state.nextWaveTimer = 0;
-    // update HUD
-    elWave.textContent = state.wave + '/' + WAVE_COUNT;
-  }
-
-  function spawnEnemy() {
-    if (state.enemiesToSpawn<=0) return;
-    // spawn at border
-    const side = randi(0,3);
-    let x=0,y=0;
-    if (side===0){ x=rand(0,W); y=10; }
-    if (side===1){ x=W-10; y=rand(0,H); }
-    if (side===2){ x=rand(0,W); y=H-10; }
-    if (side===3){ x=10; y=rand(0,H); }
-    const e = new Enemy(x,y, state.wave);
-    state.enemies.push(e);
-    state.enemiesToSpawn--;
-  }
-
-  // ===== Boosts =====
-  function spawnBoost() {
-    const types = ['atk','def','heal','fix','hp'];
-    const b = new Boost(rand(40,W-40), rand(40,H-40), types[randi(0, types.length-1)]);
-    state.boosts.push(b);
-  }
-
-  function collectBoost(n, b) {
-    if (b.type==='hp') n.hp = clamp(n.hp + 30, 0, n.maxHp);
-    if (b.type==='atk') n.atk += 1;
-    if (b.type==='def') n.def += 1;
-    if (b.type==='heal') n.heal += 1;
-    if (b.type==='fix') n.fix += 1;
-  }
-
-  // ===== Game Over / HUD =====
-  function gameOver(win=false) {
-    state.over=true; state.started=false;
-    overlay.classList.add('show');
-    overlay.querySelector('h1').textContent = win ? '🏆 Victory!' : '💀 Defeat';
-    startBtn.textContent = 'Play Again';
-  }
-
-  function updateHUD() {
-    const me = state.ninjas[0];
-    elName.textContent = me.name;
-    elHp.style.width = `${clamp(me.hp/me.maxHp,0,1)*100}%`;
-    elAtk.textContent = me.atk;
-    elDef.textContent = me.def;
-    elHeal.textContent = me.heal;
-    elFix.textContent = me.fix;
-
-    const aliveEnemies = state.enemies.filter(e=>!e.dead).length + state.enemiesToSpawn;
-    elEnemiesLeft.textContent = aliveEnemies;
-    elWave.textContent = `${Math.min(state.wave, WAVE_COUNT)}/${WAVE_COUNT}`;
-
-    // context button label
-    const nearbyEnemy = nearest(state.enemies.filter(e=>!e.dead), state.ninjas[0], 44);
-    const damagedStructure = nearest([...state.gates, ...state.bases].filter(s=>s.hp>0 && s.hp<s.maxHp), state.ninjas[0], 46);
-    const healAlly = nearest(state.ninjas.filter(n=>n!==state.ninjas[0] && !n.dead && n.hp<n.maxHp), state.ninjas[0], 46);
-
-    contextBtn.textContent = nearbyEnemy ? 'Attack' : healAlly ? 'Heal' : damagedStructure ? 'Fix' : 'Action';
-  }
-
-  // ===== Main Loop =====
-  let last = performance.now();
-  function loop(now) {
-    const dt = now - last; last = now;
-    if (state.started && !state.over) {
-      step(dt);
-      draw();
-      updateHUD();
-    } else {
-      // still draw world if visible? optional
-      draw();
-    }
-    requestAnimationFrame(loop);
-  }
-
-  function step(dt) {
-    // player movement
-    const me = state.ninjas[0];
-    if (!me.dead) {
-      const sp = me.speed;
-      if (input.up) me.y -= sp*dt*0.06;
-      if (input.down) me.y += sp*dt*0.06;
-      if (input.left) me.x -= sp*dt*0.06;
-      if (input.right) me.x += sp*dt*0.06;
-      me.x = clamp(me.x, 16, W-16);
-      me.y = clamp(me.y, 16, H-16);
-    }
-
-    // all ninjas tick + simple collision with boosts
-    state.ninjas.forEach(n => {
-      n.step(dt);
-      for (let i=state.boosts.length-1;i>=0;i--){
-        const b = state.boosts[i];
-        if (dist(n,b) < n.r + b.r + 2) {
-          collectBoost(n,b);
-          state.boosts.splice(i,1);
-        }
-      }
-    });
-
-    // companions AI
-    for (let i=1;i<state.ninjas.length;i++){
-      companionAI(state.ninjas[i], dt);
-    }
-
-    // enemies
-    state.spawnTimer += dt;
-    if (state.enemiesToSpawn>0 && state.spawnTimer > 900) {
-      spawnEnemy();
-      state.spawnTimer = 0;
-    }
-    state.enemies.forEach(e => e.step(dt, state.gates, state.bases));
-    state.enemies = state.enemies.filter(e=>!e.dead && e.hp>0);
-
-    // boosts
-    if (!state._boostTimer) state._boostTimer = 0;
-    state._boostTimer += dt;
-    if (state._boostTimer > BOOST_INTERVAL) {
-      spawnBoost();
-      state._boostTimer = 0;
-    }
-    state.boosts.forEach(b => b.step(dt));
-    state.boosts = state.boosts.filter(b=> b.ttl>0);
-
-    // enemy vs ninjas (melee if contact)
-    state.enemies.forEach(e=>{
-      state.ninjas.forEach(n=>{
-        if (n.dead) return;
-        if (dist(n,e) < n.r + e.r + 1) {
-          const dmgToN = Math.max(1, e.atk - 0.4*n.def);
-          n.hp -= dmgToN * dt*0.03;
-          if (n.hp<=0) n.dead=true;
+      return out;
+    },
+    knight: (x,y)=> {
+      const deltas=[[1,2],[2,1],[-1,2],[-2,1],[1,-2],[2,-1],[-1,-2],[-2,-1]];
+      return deltas.map(d => ({x:x+d[0], y:y+d[1]})).filter(p=>inside(p.x,p.y));
+    },
+    orth1: (x,y)=> {
+      const out=[];
+      [[1,0],[-1,0],[0,1],[0,-1]].forEach(d=>{
+        const nx=x+d[0], ny=y+d[1];
+        if(inside(nx,ny)) out.push({x:nx,y:ny});
+      });
+      return out;
+    },
+    bishop: (x,y)=> {
+      const out=[];
+      [[1,1],[1,-1],[-1,1],[-1,-1]].forEach(d=>{
+        for(let step=1;step<BOARD_N;step++){
+          const nx=x+d[0]*step, ny=y+d[1]*step;
+          if(!inside(nx,ny)) break;
+          out.push({x:nx,y:ny,range:step});
         }
       });
-    });
+      return out;
+    },
+    rook: (x,y)=> {
+      const out=[];
+      [[1,0],[-1,0],[0,1],[0,-1]].forEach(d=>{
+        for(let step=1;step<BOARD_N;step++){
+          const nx=x+d[0]*step, ny=y+d[1]*step;
+          if(!inside(nx,ny)) break;
+          out.push({x:nx,y:ny,range:step});
+        }
+      });
+      return out;
+    },
+    spear: (x,y)=> {
+      // rook-like but limited to 3 tiles
+      const out=[];
+      [[1,0],[-1,0],[0,1],[0,-1]].forEach(d=>{
+        for(let step=1;step<=3;step++){
+          const nx=x+d[0]*step, ny=y+d[1]*step;
+          if(!inside(nx,ny)) break;
+          out.push({x:nx,y:ny,range:step});
+        }
+      });
+      return out;
+    },
+    pawnPlayer: (x,y,side)=> {
+      // player pawns advance upward (towards y=0). They capture diagonally forward.
+      const out=[];
+      const dir = -1;
+      const nx = x, ny = y + dir;
+      if(inside(nx,ny)) out.push({x:nx,y:ny});
+      // captures diagonally
+      if(inside(x-1,y+dir)) out.push({x:x-1,y:y+dir});
+      if(inside(x+1,y+dir)) out.push({x:x+1,y:y+dir});
+      return out;
+    },
+    pawnEnemy: (x,y)=> {
+      // enemy pawns (dogs) move downwards (toward y=7)
+      const dir=1;
+      const out=[];
+      const nx=x, ny=y+dir;
+      if(inside(nx,ny)) out.push({x:nx,y:ny});
+      if(inside(x-1,y+dir)) out.push({x:x-1,y:y+dir});
+      if(inside(x+1,y+dir)) out.push({x:x+1,y:y+dir});
+      return out;
+    }
+  };
 
-    // check wave/battle status
-    const enemiesAliveOrIncoming = state.enemies.length + state.enemiesToSpawn;
-    if (enemiesAliveOrIncoming===0) {
-      // next wave after a pause
-      state.nextWaveTimer += dt;
-      if (state.nextWaveTimer > 1600) {
-        nextWave();
+  // Define piece types for both sides
+  const PIECE_TYPES = {
+    // Player side
+    TATSUMARU: pieceDef('T', 'Tatsumaru', 1000, moves.king, {side:playerSide}),
+    AYAME: pieceDef('A', 'Ayame', 8, moves.knight, {side:playerSide}),
+    RIKI: pieceDef('R', 'Riki', 6, moves.orth1, {side:playerSide}),
+    RIN: pieceDef('N', 'Rin', 5, moves.bishop, {side:playerSide}),
+    TISSU: pieceDef('S', 'Tissu', 7, moves.rook, {side:playerSide}),
+    SOLDIER: pieceDef('P', 'Soldier', 3, moves.pawnPlayer, {side:playerSide}),
+
+    // Enemy side
+    DAIMYO: pieceDef('D', 'Daimyo', 1000, moves.king, {side:enemySide}),
+    S_SAMURAI: pieceDef('s', 'Samurai S', 6, moves.king, {side:enemySide}),
+    S_SPEAR: pieceDef('p', 'Samurai Spear', 7, moves.spear, {side:enemySide}),
+    S_NINJA: pieceDef('n', 'Enemy Ninja', 8, moves.knight, {side:enemySide}),
+    DOG: pieceDef('d', 'Dog', 2, moves.pawnEnemy, {side:enemySide})
+  };
+
+  // Board state: 2D array of null or {typeKey, side}
+  let board = [];
+  let currentTurn = playerSide; // player starts
+  let selected = null; // {x,y}
+  let legalMoves = []; // array of {x,y}
+  let playerHand = []; // captured enemy pieces available to drop (type keys)
+  let enemyHand = []; // enemy captured player pieces
+  let gameOver = false;
+  let lastMoveSnapshot = null;
+
+  // Utility
+  function emptyBoard() {
+    board = new Array(BOARD_N);
+    for (let y=0;y<BOARD_N;y++){
+      board[y] = new Array(BOARD_N).fill(null);
+    }
+  }
+
+  // Starting setup (mirrored)
+  function setupStartingPosition() {
+    emptyBoard();
+    playerHand = [];
+    enemyHand = [];
+    gameOver = false;
+    currentTurn = playerSide;
+    selected=null; legalMoves=[];
+    // Player pieces (bottom rows y=6..7)
+    const bottom = BOARD_N-1;
+    // Row 7 (index 7) back rank: Riki, Tissu, Rin, Tatsumaru, Ayame, Rin, Tissu, Riki
+    board[7][0] = {type:'RIKI', side:playerSide};
+    board[7][1] = {type:'TISSU', side:playerSide};
+    board[7][2] = {type:'RIN', side:playerSide};
+    board[7][3] = {type:'TATSUMARU', side:playerSide};
+    board[7][4] = {type:'AYAME', side:playerSide};
+    board[7][5] = {type:'RIN', side:playerSide};
+    board[7][6] = {type:'TISSU', side:playerSide};
+    board[7][7] = {type:'RIKI', side:playerSide};
+
+    // row 6 soldiers
+    for(let x=0;x<BOARD_N;x++){
+      board[6][x] = {type:'SOLDIER', side:playerSide};
+    }
+
+    // Enemy pieces mirrored at top
+    board[0][0] = {type:'S_SAMURAI', side:enemySide};
+    board[0][1] = {type:'S_SPEAR', side:enemySide};
+    board[0][2] = {type:'S_NINJA', side:enemySide};
+    board[0][3] = {type:'DAIMYO', side:enemySide};
+    board[0][4] = {type:'S_NINJA', side:enemySide};
+    board[0][5] = {type:'S_SPEAR', side:enemySide};
+    board[0][6] = {type:'S_SAMURAI', side:enemySide};
+    board[0][7] = {type:'DOG', side:enemySide};
+
+    // enemy pawns row 1
+    for(let x=0;x<BOARD_N;x++){
+      board[1][x] = {type:'DOG', side:enemySide};
+    }
+
+    // small tweak: make sure enemy has daimyo at [0,3]
+    render();
+    updateHandsUI();
+    setStatus("Your turn");
+  }
+
+  // Render functions
+  function render() {
+    // clear
+    ctx.clearRect(0,0,CANVAS.width,CANVAS.height);
+
+    // board background
+    ctx.fillStyle = '#0e1520';
+    ctx.fillRect(0,0,CANVAS.width,CANVAS.height);
+
+    // draw grid
+    for (let y=0;y<BOARD_N;y++){
+      for (let x=0;x<BOARD_N;x++){
+        const sx = x*cellSize, sy = y*cellSize;
+        // alternating color
+        const light = (x+y)%2===0;
+        ctx.fillStyle = light ? '#16202b' : '#0f1720';
+        ctx.fillRect(sx, sy, cellSize, cellSize);
+
+        // highlight legal move squares
+        if (legalMoves.some(m=>m.x===x && m.y===y)){
+          ctx.fillStyle = 'rgba(46,204,113,0.18)';
+          ctx.fillRect(sx, sy, cellSize, cellSize);
+        }
+
+        // highlight selected
+        if (selected && selected.x===x && selected.y===y){
+          ctx.strokeStyle = '#ffd166';
+          ctx.lineWidth = 3;
+          ctx.strokeRect(sx+4, sy+4, cellSize-8, cellSize-8);
+        }
+
+        // grid lines
+        ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(sx, sy, cellSize, cellSize);
       }
     }
 
-    // lose/win
-    const allNinjasDown = state.ninjas.every(n=>n.dead);
-    const allBasesDown = state.bases.every(b=>b.hp<=0);
-    if (allNinjasDown || allBasesDown) gameOver(false);
-  }
-
-  function draw() {
-    // background grid
-    ctx.fillStyle = '#14171c';
-    ctx.fillRect(0,0,W,H);
-    ctx.strokeStyle = '#1f242c';
-    ctx.lineWidth = 1;
-    for (let x=0; x<W; x+=32){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
-    for (let y=0; y<H; y+=32){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
-
-    // structures
-    state.gates.forEach(g=>g.draw());
-    state.bases.forEach(b=>b.draw());
-
-    // boosts
-    state.boosts.forEach(b=>b.draw());
-
-    // enemies
-    state.enemies.forEach(e=>e.draw());
-
-    // ninjas on top
-    state.ninjas.forEach(n=>n.draw());
-
-    // hints
-    if (!state.started) {
-      ctx.fillStyle='#fff'; ctx.font='16px sans-serif'; ctx.textAlign='center';
-      ctx.fillText('Configure your ninja then press Start', W/2, H/2 + 120);
+    // draw pieces
+    for (let y=0;y<BOARD_N;y++){
+      for (let x=0;x<BOARD_N;x++){
+        const p = board[y][x];
+        if (!p) continue;
+        drawPiece(p, x, y);
+      }
     }
   }
 
-  // ===== UI events =====
-  startBtn.addEventListener('click', startGame);
+  function drawPiece(p, x, y) {
+    const sx = x*cellSize + cellSize/2;
+    const sy = y*cellSize + cellSize/2;
+    const radius = cellSize*0.34;
+    // color based on side
+    ctx.beginPath();
+    ctx.fillStyle = p.side === playerSide ? '#2ecc71' : '#ff6b6b';
+    ctx.arc(sx, sy, radius, 0, Math.PI*2);
+    ctx.fill();
 
-  // Initial HUD
-  elWave.textContent = '0/' + WAVE_COUNT;
-  elEnemiesLeft.textContent = '0';
+    // inner round
+    ctx.beginPath();
+    ctx.fillStyle = '#071018';
+    ctx.arc(sx, sy, radius*0.6, 0, Math.PI*2);
+    ctx.fill();
 
-  // Kickoff
-  requestAnimationFrame(loop);
+    // label
+    ctx.fillStyle = '#fff';
+    ctx.font = `${Math.floor(cellSize*0.23)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const short = PIECE_TYPES[p.type].id;
+    ctx.fillText(short, sx, sy);
+
+    // small HP or marker could be drawn later
+  }
+
+  // Helpers for piece definitions mapping
+  const PIECE_TYPES = {
+    TATSUMARU: { id:'T', name:'Tatsumaru', value:1000, moves: moves.king },
+    AYAME: { id:'A', name:'Ayame', value:8, moves: moves.knight },
+    RIKI: { id:'R', name:'Riki', value:6, moves: moves.orth1 },
+    RIN: { id:'N', name:'Rin', value:5, moves: moves.bishop },
+    TISSU: { id:'S', name:'Tissu', value:7, moves: moves.rook },
+    SOLDIER: { id:'P', name:'Soldier', value:3, moves: moves.pawnPlayer },
+
+    DAIMYO: { id:'D', name:'Daimyo', value:1000, moves: moves.king },
+    S_SAMURAI: { id:'s', name:'Samurai', value:6, moves: moves.king },
+    S_SPEAR: { id:'p', name:'Samurai Spear', value:7, moves: moves.spear },
+    S_NINJA: { id:'n', name:'Ninja', value:8, moves: moves.knight },
+    DOG: { id:'d', name:'Dog', value:2, moves: moves.pawnEnemy }
+  };
+
+  // Compute legal moves for a piece at x,y
+  function computeLegalMoves(x, y) {
+    const p = board[y][x];
+    if (!p) return [];
+    const t = p.type;
+    const def = PIECE_TYPES[t];
+    if (!def) return [];
+    // get move candidates
+    let candidates = def.moves(x, y, p.side, board) || [];
+    const movesOut = [];
+
+    // For sliding pieces (rook, bishop, spear), we must stop on first piece encountered
+    const slidingTypes = new Set(['TISSU','RIN','S_SPEAR']);
+    if (def.moves === moves.rook || def.moves === moves.bishop || def.moves === moves.spear) {
+      // moves already contain range steps; we need to process blocked path behavior:
+      // Since moves.rook and moves.bishop / spear generated in-order by direction & steps, but not grouped, we
+      // will accept candidates but when encountering a blocking piece of any side, later further squares in same direction should not be allowed.
+      // Simpler: re-generate per direction:
+      candidates = [];
+      if (def.moves === moves.rook) {
+        [[1,0],[-1,0],[0,1],[0,-1]].forEach(dir=>{
+          for(let step=1;step<BOARD_N;step++){
+            const nx=x+dir[0]*step, ny=y+dir[1]*step;
+            if(!inside(nx,ny)) break;
+            candidates.push({x:nx,y:ny,dir:dir,step});
+            if (board[ny][nx]) break;
+          }
+        });
+      } else if (def.moves === moves.bishop) {
+        [[1,1],[1,-1],[-1,1],[-1,-1]].forEach(dir=>{
+          for(let step=1;step<BOARD_N;step++){
+            const nx=x+dir[0]*step, ny=y+dir[1]*step;
+            if(!inside(nx,ny)) break;
+            candidates.push({x:nx,y:ny,dir:dir,step});
+            if (board[ny][nx]) break;
+          }
+        });
+      } else if (def.moves === moves.spear) {
+        [[1,0],[-1,0],[0,1],[0,-1]].forEach(dir=>{
+          for(let step=1;step<=3;step++){
+            const nx=x+dir[0]*step, ny=y+dir[1]*step;
+            if(!inside(nx,ny)) break;
+            candidates.push({x:nx,y:ny,dir:dir,step});
+            if (board[ny][nx]) break;
+          }
+        });
+      }
+    }
+
+    for (const c of candidates) {
+      const nx=c.x, ny=c.y;
+      if (!inside(nx,ny)) continue;
+      const target = board[ny][nx];
+      // Pawn-like movement: allow forward moves only if empty, captures diagonally only if enemy (we earlier included both)
+      if (t === 'SOLDIER') {
+        // forward cell
+        const dir = -1;
+        if (nx === x && ny === y+dir) {
+          if (!board[ny][nx]) movesOut.push({x:nx,y:ny});
+        } else if ((nx === x-1 || nx === x+1) && ny === y+dir) {
+          if (board[ny][nx] && board[ny][nx].side !== p.side) movesOut.push({x:nx,y:ny});
+        }
+        continue;
+      }
+      if (t === 'DOG') {
+        // enemy pawn behavior: forward only if empty, capture diagonals
+        const dir = 1;
+        if (nx === x && ny === y+dir) {
+          if (!board[ny][nx]) movesOut.push({x:nx,y:ny});
+        } else if ((nx === x-1 || nx === x+1) && ny === y+dir) {
+          if (board[ny][nx] && board[ny][nx].side !== p.side) movesOut.push({x:nx,y:ny});
+        }
+        continue;
+      }
+      // For ranged Tissu (rook), allow capture anywhere along line, stop at first blocking piece handled earlier
+      if (!target) {
+        // empty square — allowed
+        movesOut.push({x:nx,y:ny});
+      } else if (target.side !== p.side) {
+        // capture
+        movesOut.push({x:nx,y:ny, capture:true});
+      } else {
+        // own piece blocks
+        // nothing
+      }
+    }
+
+    // Filter out moves that would leave own leader captured (simple king safety not implemented to keep things snappy)
+    return movesOut;
+  }
+
+  // Select / move flow
+  function onBoardClick(px, py) {
+    if (gameOver) return;
+    const x = Math.floor(px / cellSize);
+    const y = Math.floor(py / cellSize);
+    if (!inside(x,y)) return;
+
+    // If we have a hand drop active? We'll implement simple drop by selecting a hand piece then a square.
+    if (handDropActive) {
+      // attempt to drop at x,y (must be empty)
+      if (board[y][x]) {
+        setStatus("Drop square must be empty");
+        cancelHandDrop();
+        return;
+      }
+      const type = handDropActive;
+      board[y][x] = { type, side: playerSide };
+      removeFromHand(playerHand, type);
+      handDropActive = null;
+      render(); updateHandsUI();
+      // After drop, end player's turn -> enemy moves
+      endPlayerTurn();
+      return;
+    }
+
+    const cell = board[y][x];
+    if (selected && legalMoves.some(m=>m.x===x && m.y===y)) {
+      // perform move
+      movePiece(selected.x, selected.y, x, y);
+      selected = null; legalMoves = [];
+      render();
+      updateHandsUI();
+      // player moved -> enemy's turn
+      setTimeout(()=> endPlayerTurn(), 180);
+      return;
+    }
+
+    // else select if it's player's piece and turn is player
+    if (cell && cell.side === playerSide && currentTurn === playerSide) {
+      selected = {x,y};
+      legalMoves = computeLegalMoves(x,y);
+      render();
+      return;
+    }
+
+    // otherwise clear selection
+    selected = null; legalMoves = [];
+    render();
+  }
+
+  function movePiece(sx, sy, tx, ty) {
+    const piece = board[sy][sx];
+    if (!piece) return;
+    const target = board[ty][tx];
+    // capture handling
+    if (target) {
+      if (target.side === enemySide) {
+        // capture enemy -> goes to player hand
+        playerHand.push(target.type);
+      } else {
+        // shouldn't happen (captured own)
+      }
+    }
+    // move
+    board[ty][tx] = piece;
+    board[sy][sx] = null;
+
+    // promotion: player's soldier reaching y==0 -> promote to Ayame
+    if (piece.side === playerSide && piece.type === 'SOLDIER' && ty === 0) {
+      board[ty][tx] = { type:'AYAME', side:playerSide };
+    }
+
+    // if captured a player piece (rare from enemy moves), move to enemyHand in enemy turn handler
+    render();
+    checkWinLose();
+  }
+
+  // Remove first occurrence from hand
+  function removeFromHand(hand, type) {
+    const idx = hand.indexOf(type);
+    if (idx>=0) hand.splice(idx,1);
+  }
+
+  // Simple AI: compute all legal moves for enemy pieces, prefer capturing player's leader, then highest value captures, else random
+  function enemyTurn() {
+    if (gameOver) return;
+    currentTurn = enemySide;
+    setStatus("Enemy thinking...");
+    // gather moves
+    const movesList = [];
+    for (let y=0;y<BOARD_N;y++){
+      for (let x=0;x<BOARD_N;x++){
+        const p = board[y][x];
+        if (!p || p.side !== enemySide) continue;
+        const lm = computeLegalMoves(x,y);
+        lm.forEach(m=>{
+          movesList.push({sx:x, sy:y, tx:m.x, ty:m.y, capture: !!board[m.y][m.x], pieceType:p.type});
+        });
+      }
+    }
+    // prioritize capturing player's leader (Tatsumaru)
+    const captureLeader = movesList.find(m => {
+      const t = board[m.ty][m.tx];
+      return t && t.side===playerSide && t.type==='TATSUMARU';
+    });
+    if (captureLeader) {
+      applyEnemyMove(captureLeader); return;
+    }
+    // prefer moves that capture any piece, pick highest-value target
+    const captureMoves = movesList.filter(m => m.capture);
+    if (captureMoves.length > 0) {
+      // score by value of captured piece
+      captureMoves.sort((a,b)=>{
+        const va = PIECE_TYPES[board[a.ty][a.tx].type].value || 1;
+        const vb = PIECE_TYPES[board[b.ty][b.tx].type].value || 1;
+        return vb - va; // descending
+      });
+      applyEnemyMove(captureMoves[0]); return;
+    }
+    // else pick move that approaches player's leader or random
+    // find player's leader
+    let leaderLoc = null;
+    for (let y=0;y<BOARD_N;y++) for(let x=0;x<BOARD_N;x++){
+      if (board[y][x] && board[y][x].side===playerSide && board[y][x].type==='TATSUMARU') leaderLoc = {x,y};
+    }
+    if (leaderLoc && movesList.length>0) {
+      // score moves by reduction in distance to leader
+      movesList.forEach(m=>{
+        const before = Math.hypot(m.sx - leaderLoc.x, m.sy - leaderLoc.y);
+        const after = Math.hypot(m.tx - leaderLoc.x, m.ty - leaderLoc.y);
+        m.delta = before - after;
+      });
+      movesList.sort((a,b)=>{
+        if (b.delta !== a.delta) return b.delta - a.delta;
+        return Math.random() - 0.5;
+      });
+      applyEnemyMove(movesList[0]); return;
+    }
+    // fallback random move
+    if (movesList.length>0) {
+      applyEnemyMove(movesList[Math.floor(Math.random()*movesList.length)]);
+    } else {
+      // enemy had no move (rare)
+      currentTurn = playerSide;
+      setStatus("Your turn");
+    }
+  }
+
+  function applyEnemyMove(m) {
+    // m: {sx,sy,tx,ty}
+    const piece = board[m.sy][m.sx];
+    if (!piece) { currentTurn = playerSide; setStatus("Your turn"); return; }
+    const target = board[m.ty][m.tx];
+    if (target && target.side===playerSide) {
+      // capture player piece -> enemy gets it in its hand
+      enemyHand.push(target.type);
+    }
+    board[m.ty][m.tx] = piece;
+    board[m.sy][m.sx] = null;
+
+    // enemy promotion concept not implemented (keeps simple)
+    // small delay before returning to player
+    render();
+    checkWinLose();
+    setTimeout(()=> {
+      currentTurn = playerSide;
+      setStatus("Your turn");
+      render();
+      updateHandsUI();
+    }, 320);
+  }
+
+  function checkWinLose() {
+    // check if either leader captured
+    let playerLeader=false, enemyLeader=false;
+    for (let y=0;y<BOARD_N;y++) for (let x=0;x<BOARD_N;x++){
+      const p = board[y][x];
+      if (!p) continue;
+      if (p.type==='TATSUMARU' && p.side===playerSide) playerLeader=true;
+      if (p.type==='DAIMYO' && p.side===enemySide) enemyLeader=true;
+    }
+    if (!playerLeader) {
+      gameOver = true; setStatus("You lost — Tatsumaru captured"); showGameOver(false); return;
+    }
+    if (!enemyLeader) {
+      gameOver = true; setStatus("Victory — Daimyo captured"); showGameOver(true); return;
+    }
+  }
+
+  function showGameOver(win) {
+    setTimeout(()=>{
+      if (confirm(win ? "Victory! Play again?" : "Defeat. Play again?")) {
+        setupStartingPosition();
+      }
+    }, 200);
+  }
+
+  // Hand UI & drop logic
+  let handDropActive = null; // type key if user selected to drop
+  function updateHandsUI() {
+    PLAYER_HAND_EL.innerHTML = '';
+    ENEMY_HAND_EL.innerHTML = '';
+    // player hand cards
+    const counts = {};
+    playerHand.forEach(t => counts[t] = (counts[t]||0)+1);
+    Object.keys(counts).forEach(type => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `${PIECE_TYPES[type].id} <div style="font-size:11px;color:#9aa6b2">${PIECE_TYPES[type].name}</div><div style="font-size:11px;color:#9aa6b2">x${counts[type]}</div>`;
+      card.onclick = ()=> {
+        if (currentTurn !== playerSide || gameOver) return;
+        handDropActive = type;
+        setStatus(`Drop ${PIECE_TYPES[type].name} — tap empty square`);
+        // visually mark active
+        Array.from(PLAYER_HAND_EL.children).forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+      };
+      PLAYER_HAND_EL.appendChild(card);
+    });
+    if (playerHand.length===0) PLAYER_HAND_EL.innerHTML = '<div style="color:#8b98a6">(none)</div>';
+
+    // enemy hand (read-only)
+    const ecounts = {};
+    enemyHand.forEach(t => ecounts[t] = (ecounts[t]||0)+1);
+    Object.keys(ecounts).forEach(type => {
+      const card = document.createElement('div');
+      card.className='card disabled';
+      card.innerHTML = `${PIECE_TYPES[type].id} <div style="font-size:11px;color:#9aa6b2">${PIECE_TYPES[type].name}</div><div style="font-size:11px;color:#9aa6b2">x${ecounts[type]}</div>`;
+      ENEMY_HAND_EL.appendChild(card);
+    });
+    if (enemyHand.length===0) ENEMY_HAND_EL.innerHTML = '<div style="color:#8b98a6">(none)</div>';
+  }
+
+  function cancelHandDrop() {
+    handDropActive = null;
+    Array.from(PLAYER_HAND_EL.children).forEach(c => c.classList.remove('active'));
+    setStatus("Your turn");
+  }
+
+  // Status
+  function setStatus(txt) {
+    STATUS.textContent = txt;
+  }
+
+  // Event listeners
+  CANVAS.addEventListener('pointerdown', ev=>{
+    const rect = CANVAS.getBoundingClientRect();
+    const cx = ev.clientX - rect.left;
+    const cy = ev.clientY - rect.top;
+    onBoardClick(cx, cy);
+  });
+
+  BTN_RESTART.addEventListener('click', ()=> {
+    if (confirm('Restart the game?')) setupStartingPosition();
+  });
+
+  // End player's turn -> run enemy turn
+  function endPlayerTurn() {
+    if (gameOver) return;
+    currentTurn = enemySide;
+    setStatus("Enemy turn...");
+    // small delay to simulate thinking
+    setTimeout(()=> enemyTurn(), 420);
+  }
+
+  // Initial setup
+  function init() {
+    setupStartingPosition();
+    updateHandsUI();
+    render();
+  }
+
+  // expose some helper for debugging
+  window._ns = { board, PIECE_TYPES };
+
+  init();
 })();
