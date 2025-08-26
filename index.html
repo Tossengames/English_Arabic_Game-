@@ -1,63 +1,50 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Ninja Village Defense — Single Player</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Ninja Shogi — Browser Tactical</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <canvas id="game" width="960" height="540"></canvas>
+  <div id="topbar">
+    <div id="title">🥷 Ninja Shogi</div>
+    <div id="controls">
+      <button id="btnRestart">Restart</button>
+      <div id="status">Your turn</div>
+    </div>
+  </div>
 
-  <!-- HUD -->
-  <div id="hud">
-    <div id="left">
-      <div id="playerName"></div>
-      <div class="bar hp"><span id="hpFill"></span></div>
-      <div class="stats">
-        ATK: <span id="atk"></span> • DEF: <span id="def"></span> • HEAL: <span id="heal"></span> • FIX: <span id="fix"></span>
+  <div id="gameWrap">
+    <canvas id="board" width="640" height="640"></canvas>
+
+    <div id="sidebar">
+      <div class="panel">
+        <h3>Your captured pieces</h3>
+        <div id="playerHand" class="hand"></div>
+        <small>Tap a piece in hand to drop it on an empty square</small>
       </div>
-      <div class="wave">Wave: <span id="wave"></span> • Enemies Left: <span id="enemiesLeft"></span></div>
-    </div>
-    <div id="right">
-      <button id="contextBtn">Action</button>
-    </div>
-  </div>
 
-  <!-- Touch Controls -->
-  <div id="controls">
-    <div class="row">
-      <div class="btn dir" data-dir="up">⬆️</div>
-    </div>
-    <div class="row">
-      <div class="btn dir" data-dir="left">⬅️</div>
-      <div class="btn dir" data-dir="down">⬇️</div>
-      <div class="btn dir" data-dir="right">➡️</div>
-    </div>
-    <div class="row">
-      <div class="btn action" id="touchAction">⚔️</div>
-    </div>
-  </div>
-
-  <!-- Overlay (start/gameover) -->
-  <div id="overlay" class="show">
-    <div class="panel">
-      <h1>🥷 Ninja Village Defense</h1>
-      <p>Single player with AI companions</p>
-      <label>Your name:
-        <input id="nameInput" maxlength="16" placeholder="ShadowFox" />
-      </label>
-      <div class="pt">Distribute 10 points</div>
-      <div class="pts">
-        <label>ATK <input type="number" id="atkInput" min="0" max="10" value="4"></label>
-        <label>DEF <input type="number" id="defInput" min="0" max="10" value="2"></label>
-        <label>HEAL <input type="number" id="healInput" min="0" max="10" value="2"></label>
-        <label>FIX <input type="number" id="fixInput" min="0" max="10" value="2"></label>
+      <div class="panel">
+        <h3>Enemy captured pieces</h3>
+        <div id="enemyHand" class="hand"></div>
       </div>
-      <button id="startBtn">Start</button>
-      <small>Controls: WASD/Arrows to move • Space = Action • R = Repair • E = Heal teammate</small>
+
+      <div class="panel">
+        <h3>Legend</h3>
+        <ul>
+          <li><b>Tatsumaru</b> — Leader (king)</li>
+          <li><b>Ayame</b> — Assassin (knight)</li>
+          <li><b>Riki</b> — Tank (orthogonal 1)</li>
+          <li><b>Rin</b> — Healer (diagonals)</li>
+          <li><b>Tissu</b> — Shuriken (rook/ranged)</li>
+          <li><b>Soldier</b> — Pawn (promotes)</li>
+        </ul>
+      </div>
     </div>
   </div>
+
+  <div id="footer">Controls: tap/click a piece → tap a highlighted square to move. Hold pieces in hand to redeploy (drop).</div>
 
   <script src="game.js"></script>
 </body>
