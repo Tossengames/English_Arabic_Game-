@@ -2,187 +2,215 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sky Road Runner</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chō-Han Bakuchi</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #00b894; font-family: sans-serif; touch-action: none; }
-        canvas { display: block; }
-        #menu {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: white; padding: 30px; border-radius: 15px;
-            display: flex; flex-direction: column; gap: 10px; width: 260px; z-index: 10;
+        :root {
+            --edo-red: #8b0000;
+            --gold: #d4af37;
+            --ink-black: #1a1a1a;
+            --paper-white: #f4e4bc;
         }
-        #scoreUI { position: absolute; top: 20px; width: 100%; text-align: center; color: white; font-size: 50px; font-weight: bold; pointer-events: none; text-shadow: 2px 2px 0px #000; }
-        input { padding: 8px; border: 1px solid #ddd; }
-        button { padding: 15px; background: #0984e3; color: white; border: none; font-weight: bold; border-radius: 5px; cursor: pointer; }
+
+        body {
+            background-color: var(--ink-black);
+            color: var(--paper-white);
+            font-family: 'Georgia', serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+            padding: 20px;
+        }
+
+        h1 { color: var(--edo-red); text-transform: uppercase; letter-spacing: 3px; }
+        .hidden { display: none !important; }
+
+        /* Setup Screen */
+        .setup-card, .bet-card, .result-card {
+            background: #2a2a2a;
+            padding: 20px;
+            border: 2px solid var(--gold);
+            border-radius: 10px;
+        }
+
+        input, select {
+            padding: 10px;
+            margin: 10px 0;
+            width: 80%;
+            border-radius: 5px;
+            border: none;
+        }
+
+        button {
+            background-color: var(--edo-red);
+            color: white;
+            border: 1px solid var(--gold);
+            padding: 12px 24px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            margin-top: 15px;
+            transition: 0.3s;
+        }
+
+        button:hover { background-color: #b30000; transform: scale(1.05); }
+
+        /* Dice Animation */
+        .dice-box {
+            font-size: 4rem;
+            margin: 20px 0;
+            height: 100px;
+        }
+
+        .shaking { animation: shake 0.2s infinite; }
+        @keyframes shake {
+            0% { transform: translate(2px, 1px) rotate(0deg); }
+            50% { transform: translate(-2px, -1px) rotate(1deg); }
+            100% { transform: translate(2px, 1px) rotate(0deg); }
+        }
+
+        .player-bet-list { text-align: left; margin: 20px auto; width: 80%; }
+        .win { color: #4caf50; font-weight: bold; }
+        .loss { color: #f44336; }
     </style>
 </head>
 <body>
 
-    <div id="scoreUI" style="display:none;">0</div>
-    <div id="menu">
-        <h2 style="margin-top:0">Settings</h2>
-        <label>Road Width:</label>
-        <input type="number" id="roadWidth" value="180">
-        <label>Game Speed:</label>
-        <input type="number" id="gameSpeed" value="5">
-        <button onclick="startGame()">START RACE</button>
+<div class="container">
+    <h1>Chō-Han</h1>
+
+    <div id="setup-screen" class="setup-card">
+        <p>How many gamblers?</p>
+        <select id="player-count">
+            <option value="1">1 Player</option>
+            <option value="2">2 Players</option>
+            <option value="3">3 Players</option>
+            <option value="4">4 Players</option>
+            <option value="8">8 Players</option>
+        </select>
+        <div id="name-inputs"></div>
+        <button onclick="startGame()">Enter the Den</button>
     </div>
-    <canvas id="gameCanvas"></canvas>
+
+    <div id="bet-screen" class="bet-card hidden">
+        <h2 id="current-player-name">Player Name</h2>
+        <p>Choose your destiny:</p>
+        <button onclick="recordBet('Chō')">CHŌ (Even)</button>
+        <button onclick="recordBet('Han')">HAN (Odd)</button>
+        <p style="font-size: 0.8rem; color: gray; margin-top: 20px;">Pass the phone to the next player after clicking.</p>
+    </div>
+
+    <div id="reveal-screen" class="result-card hidden">
+        <div id="dice-container" class="dice-box">🏮</div>
+        <h2 id="result-text">Waiting...</h2>
+        <div id="player-results" class="player-bet-list"></div>
+        <button onclick="resetRound()">Next Round</button>
+    </div>
+</div>
 
 <script>
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+    let players = [];
+    let bets = [];
+    let currentPlayerIndex = 0;
 
-let gameActive = false;
-let score = 0;
-let roadBlocks = [];
-let incoming = null;
-let speed = 5;
-let roadW = 180;
-let difficulty = 1;
+    // Initialize name inputs based on selection
+    document.getElementById('player-count').addEventListener('change', function(e) {
+        const count = e.target.value;
+        const container = document.getElementById('name-inputs');
+        container.innerHTML = '';
+        for(let i=1; i<=count; i++) {
+            container.innerHTML += `<input type="text" id="p${i}" placeholder="Player ${i} Name" value="Player ${i}">`;
+        }
+    });
+    // Trigger once on load
+    document.getElementById('player-count').dispatchEvent(new Event('change'));
 
-function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-}
-window.addEventListener('resize', resize);
-resize();
+    function startGame() {
+        const count = document.getElementById('player-count').value;
+        players = [];
+        for(let i=1; i<=count; i++) {
+            players.push(document.getElementById(`p${i}`).value);
+        }
+        document.getElementById('setup-screen').classList.add('hidden');
+        startBettingRound();
+    }
 
-function startGame() {
-    roadW = parseInt(document.getElementById('roadWidth').value);
-    speed = parseFloat(document.getElementById('gameSpeed').value);
-    
-    document.getElementById('menu').style.display = 'none';
-    document.getElementById('scoreUI').style.display = 'block';
-    
-    score = 0;
-    difficulty = 1;
-    roadBlocks = [];
-    
-    // Starting Road (3 blocks)
-    for(let i = 0; i < 4; i++) {
-        roadBlocks.push({
-            x: canvas.width/2 - roadW/2,
-            y: canvas.height - (i * 150) - 150,
-            w: roadW,
-            h: 150
+    function startBettingRound() {
+        currentPlayerIndex = 0;
+        bets = [];
+        showBettingScreen();
+    }
+
+    function showBettingScreen() {
+        document.getElementById('bet-screen').classList.remove('hidden');
+        document.getElementById('reveal-screen').classList.add('hidden');
+        document.getElementById('current-player-name').innerText = players[currentPlayerIndex];
+    }
+
+    function recordBet(choice) {
+        bets.push(choice);
+        currentPlayerIndex++;
+
+        if (currentPlayerIndex < players.length) {
+            showBettingScreen();
+        } else {
+            showRevealScreen();
+        }
+    }
+
+    function showRevealScreen() {
+        document.getElementById('bet-screen').classList.add('hidden');
+        document.getElementById('reveal-screen').classList.remove('hidden');
+        
+        const diceEl = document.getElementById('dice-container');
+        const resultEl = document.getElementById('result-text');
+        
+        // Shaking animation
+        diceEl.innerHTML = "🎲🎲";
+        diceEl.classList.add('shaking');
+        resultEl.innerText = "The cup is shaking...";
+
+        setTimeout(() => {
+            diceEl.classList.remove('shaking');
+            const d1 = Math.floor(Math.random() * 6) + 1;
+            const d2 = Math.floor(Math.random() * 6) + 1;
+            const sum = d1 + d2;
+            const outcome = (sum % 2 === 0) ? 'Chō' : 'Han';
+            
+            diceEl.innerText = `${getDiceIcon(d1)} ${getDiceIcon(d2)}`;
+            resultEl.innerText = `Result: ${sum} - ${outcome.toUpperCase()}!`;
+            
+            displayWinners(outcome);
+        }, 1500);
+    }
+
+    function getDiceIcon(num) {
+        const icons = ['','⚀','⚁','⚂','⚃','⚄','⚅'];
+        return icons[num];
+    }
+
+    function displayWinners(outcome) {
+        const list = document.getElementById('player-results');
+        list.innerHTML = "<h3>Results:</h3>";
+        players.forEach((name, i) => {
+            const isWin = bets[i] === outcome;
+            list.innerHTML += `<div class="${isWin ? 'win' : 'loss'}">
+                ${name}: ${bets[i]} ${isWin ? '✓' : '✗'}
+            </div>`;
         });
     }
-    
-    incoming = null;
-    gameActive = true;
-    loop();
-}
 
-function spawnBlock() {
-    if (incoming) return;
-    const last = roadBlocks[roadBlocks.length - 1];
-    const width = roadW * (0.8 + Math.random() * 1.5);
-    const side = Math.random() > 0.5 ? -width : canvas.width;
-    
-    incoming = {
-        x: side,
-        y: last.y - 150,
-        w: width,
-        h: 150,
-        vx: (side < 0 ? 1 : -1) * (speed * 1.5 * difficulty)
-    };
-}
-
-function stopBlock() {
-    if (!gameActive || !incoming) return;
-    roadBlocks.push({...incoming});
-    incoming = null;
-    score++;
-    difficulty += 0.05;
-}
-
-window.addEventListener('mousedown', stopBlock);
-window.addEventListener('touchstart', (e) => { e.preventDefault(); stopBlock(); });
-
-function loop() {
-    if (!gameActive) return;
-
-    // 1. Move everything down (simulating car moving forward)
-    let moveStep = speed * difficulty;
-    roadBlocks.forEach(b => b.y += moveStep);
-    if (incoming) {
-        incoming.y += moveStep;
-        incoming.x += incoming.vx;
-        // Keep incoming block bouncing on screen
-        if (incoming.x < 0 || incoming.x + incoming.w > canvas.width) incoming.vx *= -1;
+    function resetRound() {
+        startBettingRound();
     }
-
-    // 2. Spawn Logic: If car passes middle of a block, spawn next
-    // Car is effectively at bottom: canvas.height - 100
-    if (roadBlocks.length < 6) spawnBlock();
-
-    // 3. Clean up old blocks
-    if (roadBlocks[0].y > canvas.height) roadBlocks.shift();
-
-    // 4. Fall Logic
-    // Check which block is currently under the car
-    let carX = canvas.width / 2;
-    let currentBlock = roadBlocks.find(b => b.y + b.h > canvas.height - 80 && b.y < canvas.height - 80);
-    
-    if (!currentBlock || carX < currentBlock.x || carX > currentBlock.x + currentBlock.w) {
-        gameActive = false;
-        alert("GAME OVER! Score: " + score);
-        location.reload();
-    }
-
-    draw();
-    requestAnimationFrame(loop);
-}
-
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Draw Sky/Horizon
-    ctx.fillStyle = "#87CEEB";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Draw Road Blocks
-    roadBlocks.forEach((b, index) => {
-        // Perspective effect: higher blocks are slightly narrower
-        let scale = 1 - ( (canvas.height - b.y) / canvas.height ) * 0.5;
-        let visualW = b.w * scale;
-        let visualX = (b.x - canvas.width/2) * scale + canvas.width/2;
-
-        ctx.fillStyle = "#34495e";
-        ctx.fillRect(visualX, b.y, visualW, b.h);
-        
-        // Lines on road
-        ctx.strokeStyle = "rgba(255,255,255,0.5)";
-        ctx.lineWidth = 2;
-        ctx.strokeRect(visualX, b.y, visualW, b.h);
-    });
-
-    // Draw Incoming Block
-    if (incoming) {
-        ctx.fillStyle = "#e74c3c";
-        ctx.fillRect(incoming.x, incoming.y, incoming.w, incoming.h);
-    }
-
-    // Draw Car (Static at bottom center)
-    const cw = 50; const ch = 80;
-    const cx = canvas.width/2 - cw/2;
-    const cy = canvas.height - 120;
-    
-    // Car Body
-    ctx.fillStyle = "yellow";
-    ctx.fillRect(cx, cy, cw, ch);
-    // Windshield
-    ctx.fillStyle = "black";
-    ctx.fillRect(cx + 5, cy + 10, cw - 10, 15);
-    // Tail lights
-    ctx.fillStyle = "red";
-    ctx.fillRect(cx + 5, cy + ch - 10, 10, 5);
-    ctx.fillRect(cx + cw - 15, cy + ch - 10, 10, 5);
-
-    document.getElementById('scoreUI').innerText = score;
-}
 </script>
+
 </body>
 </html>
