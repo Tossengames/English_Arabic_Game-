@@ -3,55 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sky Road 3D Stacker</title>
+    <title>Sky Road Runner</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #1e272e; font-family: 'Segoe UI', sans-serif; touch-action: none; }
-        canvas { display: block; background: linear-gradient(#1e90ff, #87CEEB); }
+        body { margin: 0; overflow: hidden; background: #00b894; font-family: sans-serif; touch-action: none; }
+        canvas { display: block; }
         #menu {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 15px;
-            display: flex; flex-direction: column; gap: 8px; width: 280px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            background: white; padding: 30px; border-radius: 15px;
+            display: flex; flex-direction: column; gap: 10px; width: 260px; z-index: 10;
         }
-        h2 { text-align: center; margin: 0 0 10px 0; color: #2f3542; }
-        label { font-size: 11px; font-weight: bold; color: #57606f; text-transform: uppercase; }
-        input { padding: 8px; border: 1px solid #ccc; border-radius: 5px; }
-        button { margin-top: 10px; padding: 12px; background: #ff4757; border: none; color: white; cursor: pointer; border-radius: 5px; font-weight: bold; font-size: 16px; }
-        #scoreUI { position: absolute; top: 20px; width: 100%; text-align: center; font-size: 40px; color: white; font-weight: bold; text-shadow: 2px 2px 10px rgba(0,0,0,0.5); pointer-events: none; }
+        #scoreUI { position: absolute; top: 20px; width: 100%; text-align: center; color: white; font-size: 50px; font-weight: bold; pointer-events: none; text-shadow: 2px 2px 0px #000; }
+        input { padding: 8px; border: 1px solid #ddd; }
+        button { padding: 15px; background: #0984e3; color: white; border: none; font-weight: bold; border-radius: 5px; cursor: pointer; }
     </style>
 </head>
 <body>
 
     <div id="scoreUI" style="display:none;">0</div>
-
     <div id="menu">
-        <h2>Settings</h2>
-        <label>Road Width</label>
-        <input type="number" id="roadWidth" value="200">
-        <label>Car Speed</label>
-        <input type="number" id="carSpeed" value="5">
-        <label>Min Block Speed</label>
-        <input type="number" id="minBSpeed" value="4">
-        <label>Max Block Speed</label>
-        <input type="number" id="maxBSpeed" value="8">
-        <button onclick="startGame()">RACE START</button>
+        <h2 style="margin-top:0">Settings</h2>
+        <label>Road Width:</label>
+        <input type="number" id="roadWidth" value="180">
+        <label>Game Speed:</label>
+        <input type="number" id="gameSpeed" value="5">
+        <button onclick="startGame()">START RACE</button>
     </div>
-
     <canvas id="gameCanvas"></canvas>
 
 <script>
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-const menu = document.getElementById('menu');
-const scoreUI = document.getElementById('scoreUI');
 
 let gameActive = false;
 let score = 0;
-let distanceTraveled = 0;
+let roadBlocks = [];
+let incoming = null;
+let speed = 5;
+let roadW = 180;
 let difficulty = 1;
-
-let config = {};
-let blocks = [];
-let incomingBlock = null;
 
 function resize() {
     canvas.width = window.innerWidth;
@@ -61,172 +50,138 @@ window.addEventListener('resize', resize);
 resize();
 
 function startGame() {
-    config = {
-        roadW: parseInt(document.getElementById('roadWidth').value),
-        carS: parseFloat(document.getElementById('carSpeed').value),
-        minBS: parseFloat(document.getElementById('minBSpeed').value),
-        maxBS: parseFloat(document.getElementById('maxBSpeed').value)
-    };
-
-    menu.style.display = 'none';
-    scoreUI.style.display = 'block';
+    roadW = parseInt(document.getElementById('roadWidth').value);
+    speed = parseFloat(document.getElementById('gameSpeed').value);
+    
+    document.getElementById('menu').style.display = 'none';
+    document.getElementById('scoreUI').style.display = 'block';
     
     score = 0;
-    distanceTraveled = 0;
     difficulty = 1;
-    blocks = [];
-
-    // Horizon line is at 40% of screen height
-    const horizon = canvas.height * 0.4;
-
-    // Initial 3 blocks (z represents distance from camera)
+    roadBlocks = [];
+    
+    // Starting Road (3 blocks)
     for(let i = 0; i < 4; i++) {
-        blocks.push({
-            x: canvas.width / 2 - config.roadW / 2,
-            z: i * 200, // Distance
-            w: config.roadW,
-            active: true
+        roadBlocks.push({
+            x: canvas.width/2 - roadW/2,
+            y: canvas.height - (i * 150) - 150,
+            w: roadW,
+            h: 150
         });
     }
-
-    incomingBlock = null;
+    
+    incoming = null;
     gameActive = true;
-    animate();
+    loop();
 }
 
-function spawnIncomingBlock() {
-    if (incomingBlock) return;
-
-    const lastBlock = blocks[blocks.length - 1];
-    const side = Math.random() > 0.5 ? 1 : -1;
-    const width = config.roadW * (0.8 + Math.random() * 1.5);
-    const speed = (config.minBS + Math.random() * (config.maxBS - config.minBS)) * difficulty;
+function spawnBlock() {
+    if (incoming) return;
+    const last = roadBlocks[roadBlocks.length - 1];
+    const width = roadW * (0.8 + Math.random() * 1.5);
+    const side = Math.random() > 0.5 ? -width : canvas.width;
     
-    incomingBlock = {
-        x: side === 1 ? canvas.width + width : -width,
-        z: lastBlock.z + 200,
+    incoming = {
+        x: side,
+        y: last.y - 150,
         w: width,
-        vx: side === 1 ? -speed : speed,
-        moving: true
+        h: 150,
+        vx: (side < 0 ? 1 : -1) * (speed * 1.5 * difficulty)
     };
 }
 
-function handleAction() {
-    if (!gameActive) return;
-    if (incomingBlock && incomingBlock.moving) {
-        incomingBlock.moving = false;
-        blocks.push(incomingBlock);
-        incomingBlock = null;
-        score++;
-        difficulty += 0.08;
-    }
+function stopBlock() {
+    if (!gameActive || !incoming) return;
+    roadBlocks.push({...incoming});
+    incoming = null;
+    score++;
+    difficulty += 0.05;
 }
 
-window.addEventListener('mousedown', handleAction);
-window.addEventListener('touchstart', (e) => { e.preventDefault(); handleAction(); });
+window.addEventListener('mousedown', stopBlock);
+window.addEventListener('touchstart', (e) => { e.preventDefault(); stopBlock(); });
 
-function update() {
+function loop() {
     if (!gameActive) return;
 
-    const speed = config.carS * difficulty;
-    distanceTraveled += speed;
-
-    // Move blocks toward camera
-    blocks.forEach(b => b.z -= speed);
-    if (incomingBlock) incomingBlock.z -= speed;
-
-    // Remove old blocks
-    if (blocks[0] && blocks[0].z < -200) {
-        blocks.shift();
+    // 1. Move everything down (simulating car moving forward)
+    let moveStep = speed * difficulty;
+    roadBlocks.forEach(b => b.y += moveStep);
+    if (incoming) {
+        incoming.y += moveStep;
+        incoming.x += incoming.vx;
+        // Keep incoming block bouncing on screen
+        if (incoming.x < 0 || incoming.x + incoming.w > canvas.width) incoming.vx *= -1;
     }
 
-    // Spawn new block logic
-    if (!incomingBlock && blocks.length < 5) {
-        spawnIncomingBlock();
-    }
+    // 2. Spawn Logic: If car passes middle of a block, spawn next
+    // Car is effectively at bottom: canvas.height - 100
+    if (roadBlocks.length < 6) spawnBlock();
 
-    // Move incoming block horizontally
-    if (incomingBlock && incomingBlock.moving) {
-        incomingBlock.x += incomingBlock.vx;
-        // Bounce within screen bounds
-        if (incomingBlock.x > canvas.width || incomingBlock.x + incomingBlock.w < 0) {
-            incomingBlock.vx *= -1;
-        }
-    }
+    // 3. Clean up old blocks
+    if (roadBlocks[0].y > canvas.height) roadBlocks.shift();
 
-    // Check if the block the car is currently "on" exists
-    // The car is effectively at Z = 50
-    let currentBlock = blocks.find(b => b.z < 100 && b.z > -100);
+    // 4. Fall Logic
+    // Check which block is currently under the car
+    let carX = canvas.width / 2;
+    let currentBlock = roadBlocks.find(b => b.y + b.h > canvas.height - 80 && b.y < canvas.height - 80);
     
-    if (currentBlock) {
-        const carCenterX = canvas.width / 2;
-        if (carCenterX < currentBlock.x || carCenterX > currentBlock.x + currentBlock.w) {
-            gameOver();
-        }
-    } else if (blocks.length > 0 && blocks[0].z < 0) {
-        // If we passed a block and there is no block under us
-        gameOver();
+    if (!currentBlock || carX < currentBlock.x || carX > currentBlock.x + currentBlock.w) {
+        gameActive = false;
+        alert("GAME OVER! Score: " + score);
+        location.reload();
     }
-}
 
-function gameOver() {
-    gameActive = false;
-    alert("CRASHED! Score: " + score);
-    location.reload();
-}
-
-function project(x, z, w) {
-    const horizon = canvas.height * 0.4;
-    const perspective = 400; 
-    const scale = perspective / (perspective + z);
-    
-    return {
-        px: (x - canvas.width / 2) * scale + canvas.width / 2,
-        py: horizon + (canvas.height - horizon) * (1 - scale),
-        pw: w * scale,
-        ph: 50 * scale // Arbitrary height for block thickness
-    };
+    draw();
+    requestAnimationFrame(loop);
 }
 
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw blocks from furthest to nearest
-    const allBlocks = [...blocks];
-    if (incomingBlock) allBlocks.push(incomingBlock);
-    
-    allBlocks.sort((a, b) => b.z - a.z).forEach(b => {
-        if (b.z < 0 && b !== incomingBlock) return;
+    // Draw Sky/Horizon
+    ctx.fillStyle = "#87CEEB";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw Road Blocks
+    roadBlocks.forEach((b, index) => {
+        // Perspective effect: higher blocks are slightly narrower
+        let scale = 1 - ( (canvas.height - b.y) / canvas.height ) * 0.5;
+        let visualW = b.w * scale;
+        let visualX = (b.x - canvas.width/2) * scale + canvas.width/2;
+
+        ctx.fillStyle = "#34495e";
+        ctx.fillRect(visualX, b.y, visualW, b.h);
         
-        const p = project(b.x, b.z, b.w);
-        
-        // Draw Road Block
-        ctx.fillStyle = b.moving ? "#ff4757" : "#57606f";
-        ctx.strokeStyle = "#ffffff";
+        // Lines on road
+        ctx.strokeStyle = "rgba(255,255,255,0.5)";
         ctx.lineWidth = 2;
-        
-        ctx.beginPath();
-        ctx.rect(p.px, p.py, p.pw, p.ph * 2);
-        ctx.fill();
-        ctx.stroke();
+        ctx.strokeRect(visualX, b.y, visualW, b.h);
     });
 
-    // Draw Car (Static position in 3D space, always at bottom)
-    const carWidth = 60;
-    const carHeight = 40;
-    ctx.fillStyle = "#f1c40f";
-    ctx.fillRect(canvas.width / 2 - carWidth / 2, canvas.height - 120, carWidth, carHeight);
+    // Draw Incoming Block
+    if (incoming) {
+        ctx.fillStyle = "#e74c3c";
+        ctx.fillRect(incoming.x, incoming.y, incoming.w, incoming.h);
+    }
+
+    // Draw Car (Static at bottom center)
+    const cw = 50; const ch = 80;
+    const cx = canvas.width/2 - cw/2;
+    const cy = canvas.height - 120;
+    
+    // Car Body
+    ctx.fillStyle = "yellow";
+    ctx.fillRect(cx, cy, cw, ch);
     // Windshield
-    ctx.fillStyle = "#333";
-    ctx.fillRect(canvas.width / 2 - carWidth / 2 + 10, canvas.height - 110, carWidth - 20, 10);
+    ctx.fillStyle = "black";
+    ctx.fillRect(cx + 5, cy + 10, cw - 10, 15);
+    // Tail lights
+    ctx.fillStyle = "red";
+    ctx.fillRect(cx + 5, cy + ch - 10, 10, 5);
+    ctx.fillRect(cx + cw - 15, cy + ch - 10, 10, 5);
 
-    scoreUI.innerText = score;
-}
-
-function animate() {
-    update();
-    draw();
-    if (gameActive) requestAnimationFrame(animate);
+    document.getElementById('scoreUI').innerText = score;
 }
 </script>
 </body>
