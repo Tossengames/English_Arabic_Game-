@@ -51,6 +51,7 @@
         }
         .shout-active { opacity: 1; transform: scale(1); }
         
+        /* Layout Positions */
         .spot-0 { top: 2%; left: 42%; }   .spot-1 { top: 12%; right: 5%; }
         .spot-2 { top: 45%; right: 2%; }  .spot-3 { bottom: 12%; right: 5%; }
         .spot-4 { bottom: 2%; left: 42%; } .spot-5 { bottom: 12%; left: 5%; }
@@ -62,7 +63,9 @@
 
         #ui-layer { height: 38%; background: #000; border-top: 3px solid var(--gold); padding: 10px; box-sizing: border-box; }
         .hidden { display: none !important; }
-        .payout-particle { position: absolute; font-weight: bold; font-size: 1.6rem; pointer-events: none; z-index: 100; transition: 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        
+        /* SLOWER ANIMATION TRANSITION (1.8s) */
+        .payout-particle { position: absolute; font-weight: bold; font-size: 1.6rem; pointer-events: none; z-index: 100; transition: 1.8s cubic-bezier(0.25, 1, 0.5, 1); }
     </style>
 </head>
 <body>
@@ -154,6 +157,10 @@
         document.getElementById('dice-reveal').classList.add('hidden');
         document.getElementById('results-ui').classList.add('hidden');
         document.getElementById('action-btns').classList.add('hidden');
+        
+        // RESET CHEAT BUTTON FOR NEW ROUND
+        document.getElementById('cheat-btn').classList.remove('hidden');
+        
         players.forEach((p, i) => {
             document.getElementById(`coin-${i}`).innerText = "-";
             document.getElementById(`coin-${i}`).style.background = "#222";
@@ -215,6 +222,10 @@
             document.getElementById('cup').classList.remove('cup-shake');
             document.getElementById('cup').style.transform = "translateY(-400px)"; 
             let d1 = Math.floor(Math.random()*6)+1, d2 = Math.floor(Math.random()*6)+1;
+            
+            // Random chance for cheating (Dealer rigged it)
+            isCheating = Math.random() < 0.15;
+            
             roundResult = (d1+d2)%2 === 0 ? 'Chō' : 'Han';
             let diceBox = document.getElementById('dice-reveal');
             diceBox.innerHTML = ''; 
@@ -258,13 +269,15 @@
             let rect = document.getElementById(`spot-${i}`).getBoundingClientRect();
             let mat = document.getElementById('tatami').getBoundingClientRect();
             
-            await new Promise(r => setTimeout(r, 80)); 
+            await new Promise(r => setTimeout(r, 100)); 
+            
+            // Text moves slowly (1.8s) across the screen
             part.style.left = (rect.left - mat.left + 20) + 'px';
             part.style.top = (rect.top - mat.top) + 'px';
             part.style.opacity = '0';
             document.getElementById(`coin-${i}`).style.background = won ? 'var(--win)' : 'var(--lose)';
             
-            // PAYOUT WAIT: 900ms (A bit faster)
+            // Wait time between player turns (unchanged as requested)
             await new Promise(r => setTimeout(r, 900));
             part.remove();
         }
@@ -272,9 +285,18 @@
     }
 
     function callCheat() {
-        ticker("CHECKING...");
-        setTimeout(() => { ticker("NO CHEATING! FINE: 100"); players.forEach(p => p.money = Math.max(0, p.money-100)); }, 800);
+        ticker("INVESTIGATING THE CUP...");
         document.getElementById('cheat-btn').classList.add('hidden');
+        
+        setTimeout(() => { 
+            if(isCheating) {
+                ticker("DEALER EXPOSED! 200 MON REBATE!");
+                players.forEach((p, i) => { if(bets[i]) p.money += 200; });
+            } else {
+                ticker("DEALER IS CLEAN! FINE: 100 MON");
+                players.forEach(p => p.money = Math.max(0, p.money - 100));
+            }
+        }, 1200);
     }
 </script>
 </body>
