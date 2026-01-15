@@ -17,45 +17,35 @@
             background: var(--wood); display: flex; flex-direction: column; position: relative; 
         }
 
-        /* SETUP SCREEN - BUTTON ON TOP */
+        /* PRE-GAME SETUP (Button at Top) */
         #setup-screen {
             position: absolute; inset: 0; background: #111; z-index: 1000;
             display: flex; flex-direction: column;
         }
-
         .setup-header {
             padding: 15px; background: #1a1a1a; border-bottom: 2px solid var(--gold);
             display: flex; flex-direction: column; gap: 10px; flex-shrink: 0;
         }
-
-        .setup-content { flex: 1; overflow-y: auto; padding: 15px; -webkit-overflow-scrolling: touch; }
-
+        .setup-content { flex: 1; overflow-y: auto; padding: 15px; }
         .setup-row { 
             background: #222; padding: 12px; border-radius: 8px; 
             display: flex; justify-content: space-between; align-items: center; 
             margin-bottom: 8px; border-left: 5px solid; 
         }
-        .setup-row input { background: #000; color: #fff; border: 1px solid #444; padding: 8px; width: 55%; border-radius: 4px; }
-        .type-btn { padding: 10px; min-width: 75px; background: #333; color: white; border: 1px solid var(--gold); border-radius: 4px; font-size: 0.8rem; }
+        .setup-row input { background: #000; color: #fff; border: 1px solid #444; padding: 8px; width: 50%; }
+        .type-btn { padding: 10px; min-width: 80px; background: #333; color: white; border: 1px solid var(--gold); border-radius: 4px; }
+        .start-btn { width: 100%; padding: 18px; background: var(--red); color: white; border: 2px solid var(--gold); font-weight: bold; font-size: 1.2rem; border-radius: 8px; }
 
-        .start-btn { 
-            width: 100%; padding: 18px; background: var(--red); color: white; 
-            border: 2px solid var(--gold); font-weight: bold; font-size: 1.2rem; border-radius: 8px; 
-        }
-
-        /* TATAMI & SHAKE FX */
+        /* GAME ELEMENTS */
         #log-ticker { height: 40px; background: #000; color: var(--gold); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; border-bottom: 2px solid var(--gold); text-transform: uppercase; flex-shrink: 0; }
-        #tatami { flex: 1.2; background: var(--tatami); margin: 5px; border: 8px solid #3d2b1f; position: relative; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+        #tatami { flex: 1; background: var(--tatami); margin: 5px; border: 8px solid #3d2b1f; position: relative; display: flex; justify-content: center; align-items: center; overflow: hidden; }
         
-        /* THE SHAKE ANIMATION */
+        /* SHAKE ANIMATION */
         .shake-den { animation: shake 0.1s infinite; }
-        @keyframes shake {
-            0% { transform: translate(2px, 1px) rotate(0deg); }
-            50% { transform: translate(-1px, -2px) rotate(1deg); }
-            100% { transform: translate(1px, 2px) rotate(0deg); }
-        }
+        @keyframes shake { 0% { transform: translate(2px, 1px); } 50% { transform: translate(-1px, -2px); } 100% { transform: translate(1px, 2px); } }
 
         #cup { width: 70px; height: 90px; background: #5d4037; border-radius: 35px 35px 5px 5px; border: 4px solid #3e2723; position: relative; z-index: 10; transition: transform 0.8s; }
+        .dice-reveal { position: absolute; display: flex; gap: 15px; z-index: 5; }
         .die { width: 35px; height: 35px; background: #fff; border-radius: 4px; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 3px; box-sizing: border-box; }
         .dot { background: #111; border-radius: 50%; width: 5px; height: 5px; align-self: center; justify-self: center; }
         .dot.red { background: #d32f2f; width: 8px; height: 8px; }
@@ -63,28 +53,20 @@
         .player-spot { position: absolute; width: 65px; text-align: center; font-size: 0.7rem; font-weight: bold; transition: 0.4s; }
         .coin-visual { width: 30px; height: 30px; border-radius: 50%; border: 1px solid #444; background: #222; display: flex; align-items: center; justify-content: center; margin: 0 auto 2px; }
         
-        /* SHOUT BUBBLE FIX */
-        .shout-bubble { 
-            position: absolute; background: #fff; color: #000; padding: 2px 8px; 
-            border-radius: 10px; font-size: 0.6rem; font-weight: 900; 
-            transition: 0.3s; z-index: 20; opacity: 0; transform: scale(0);
-        }
+        /* SHOUT BUBBLES */
+        .shout-bubble { position: absolute; background: #fff; color: #000; padding: 2px 8px; border-radius: 10px; font-size: 0.6rem; font-weight: 900; transition: 0.3s; z-index: 20; opacity: 0; transform: scale(0); }
         .shout-active { opacity: 1; transform: scale(1); }
-        
-        /* Default shout position (Top) */
         .shout-pos-default { top: -18px; left: 50%; transform: translateX(-50%) scale(0); }
         .shout-pos-default.shout-active { transform: translateX(-50%) scale(1); }
-        
-        /* Player 1 Fix (Shout to the side so it doesn't go off top) */
-        .spot-0 .shout-bubble { top: 10px; left: 70px; transform: scale(0); }
-        .spot-0 .shout-active { transform: scale(1); }
+        .spot-0 .shout-bubble { top: 10px; left: 70px; } /* SIDE SHOUT FOR PLAYER 1 */
 
+        /* BOARD POSITIONS */
         .spot-0 { top: 2%; left: 42%; } .spot-1 { top: 12%; right: 5%; }
         .spot-2 { top: 45%; right: 2%; } .spot-3 { bottom: 12%; right: 5%; }
         .spot-4 { bottom: 2%; left: 42%; } .spot-5 { bottom: 12%; left: 5%; }
         .spot-6 { top: 45%; left: 2%; } .spot-7 { top: 12%; left: 5%; }
 
-        #ui-layer { height: 38%; background: #000; border-top: 3px solid var(--gold); padding: 10px; display: flex; flex-direction: column; box-sizing: border-box; }
+        #ui-layer { height: 38%; background: #000; border-top: 3px solid var(--gold); padding: 10px; box-sizing: border-box; }
         .hidden { display: none !important; }
         .payout-particle { position: absolute; font-weight: bold; font-size: 1.2rem; pointer-events: none; z-index: 50; transition: 1.2s; }
     </style>
@@ -94,21 +76,17 @@
 <div id="game-view">
     <div id="setup-screen">
         <div class="setup-header">
-            <h2 style="color: var(--gold); margin: 0; text-align:center;">CHŌ-HAN DEN</h2>
+            <h2 style="color:var(--gold); margin:0; text-align:center;">CHŌ-HAN DEN</h2>
             <button class="start-btn" onclick="startGame()">OPEN THE DEN</button>
         </div>
-        
         <div class="setup-content" id="setup-list"></div>
     </div>
 
     <div id="log-ticker">SET THE TABLE</div>
-
-    <div id="tatami-container" style="flex: 1.2; overflow: hidden;">
-        <div id="tatami">
-            <div id="cup"></div>
-            <div id="dice-reveal" class="hidden" style="position:absolute; display:flex; gap:15px; z-index:5;"></div>
-            <div id="spots-container"></div>
-        </div>
+    <div id="tatami">
+        <div id="cup"></div>
+        <div id="dice-reveal" class="dice-reveal hidden"></div>
+        <div id="spots-container"></div>
     </div>
 
     <div id="ui-layer">
@@ -167,7 +145,6 @@
             name: document.getElementById(`name-${i}`).value,
             money: 1000, isAI: isAI, color: colors[i], active: true
         }));
-        // Apply special shout class for spot-0
         document.getElementById('spots-container').innerHTML = players.map((p, i) => `
             <div id="spot-${i}" class="player-spot spot-${i}">
                 <div class="shout-bubble ${i===0 ? '' : 'shout-pos-default'}" id="shout-${i}"></div>
@@ -189,7 +166,11 @@
             const c = document.getElementById(`coin-${i}`);
             c.innerText = "-"; c.style.background = "#222";
             document.getElementById(`shout-${i}`).classList.remove('shout-active');
-            document.getElementById(`spot-${i}`).style.opacity = (p.active && p.money > 0) ? "1" : "0.3";
+            if(p.active && p.money > 0) {
+                document.getElementById(`spot-${i}`).style.opacity = "1";
+            } else {
+                document.getElementById(`spot-${i}`).style.opacity = "0.3";
+            }
         });
         nextTurn();
     }
@@ -223,6 +204,12 @@
 
     function placeBet(type) { confirmBet(type, parseInt(document.getElementById('bet-amt').value)); }
 
+    function withdraw() {
+        players[curIdx].active = false;
+        document.getElementById('betting-ui').classList.add('hidden');
+        curIdx++; nextTurn();
+    }
+
     function confirmBet(t, a) {
         bets[curIdx] = { type: t, amt: a };
         document.getElementById(`coin-${curIdx}`).innerText = a;
@@ -248,7 +235,6 @@
     function reveal() {
         ticker("SHAKING...");
         document.getElementById('tatami').classList.add('shake-den');
-        
         setTimeout(() => {
             document.getElementById('tatami').classList.remove('shake-den');
             document.getElementById('cup').style.transform = "translateY(-400px)"; 
@@ -292,7 +278,7 @@
     }
 
     function callCheat() {
-        if(isCheating) { ticker("CAUGHT! DEALER REWARDS YOU!"); players.forEach((p, i) => { if(bets[i]) p.money += (bets[i].amt * 2); }); }
+        if(isCheating) { ticker("CAUGHT! DEALER PAYS!"); players.forEach((p, i) => { if(bets[i]) p.money += (bets[i].amt * 2); }); }
         else { ticker("INNOCENT! 50% FINE!"); players.forEach(p => p.money = Math.floor(p.money * 0.5)); }
         document.getElementById('action-btns').classList.add('hidden');
         setTimeout(() => document.getElementById('action-btns').classList.remove('hidden'), 1000);
