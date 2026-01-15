@@ -11,73 +11,59 @@
         }
 
         body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; margin: 0; overflow: hidden; display: flex; justify-content: center; height: 100vh; }
-        #game-view { width: 100%; max-width: 500px; background: var(--wood); display: flex; flex-direction: column; position: relative; }
+        
+        #game-view { 
+            width: 100%; max-width: 500px; height: 100%;
+            background: var(--wood); display: flex; flex-direction: column; position: relative; 
+        }
 
-        #log-ticker { height: 40px; background: #000; color: var(--gold); display: flex; align-items: center; justify-content: center; font-size: 0.9rem; border-bottom: 2px solid var(--gold); text-transform: uppercase; text-align: center; padding: 0 10px; z-index: 30; }
+        #log-ticker { height: 40px; background: #000; color: var(--gold); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; border-bottom: 2px solid var(--gold); text-transform: uppercase; text-align: center; z-index: 30; flex-shrink: 0; }
 
         /* THE TATAMI */
-        #tatami { flex: 1.5; background: var(--tatami); margin: 10px; border: 12px solid #3d2b1f; position: relative; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+        #tatami { flex: 1; background: var(--tatami); margin: 5px; border: 8px solid #3d2b1f; position: relative; display: flex; justify-content: center; align-items: center; overflow: hidden; }
 
-        /* BAMBOO CUP */
-        #cup {
-            width: 80px; height: 100px; background: #5d4037; 
-            border-radius: 40px 40px 5px 5px; border: 4px solid #3e2723;
-            position: relative; z-index: 10; transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+        #cup { width: 70px; height: 90px; background: #5d4037; border-radius: 35px 35px 5px 5px; border: 4px solid #3e2723; position: relative; z-index: 10; transition: transform 0.8s; }
+        .dice-reveal { position: absolute; display: flex; gap: 15px; z-index: 5; }
+        .die { width: 35px; height: 35px; background: #fff; border-radius: 4px; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 3px; box-sizing: border-box; }
+        .dot { background: #111; border-radius: 50%; width: 5px; height: 5px; align-self: center; justify-self: center; }
+        .dot.red { background: #d32f2f; width: 8px; height: 8px; }
+
+        .player-spot { position: absolute; width: 60px; text-align: center; font-size: 0.65rem; font-weight: bold; transition: all 0.4s; }
+        .coin-visual { width: 28px; height: 28px; border-radius: 50%; border: 1px solid #444; background: #222; color: #fff; display: flex; align-items: center; justify-content: center; margin: 0 auto 2px; }
+
+        .spot-0 { top: 2%; left: 42%; } .spot-1 { top: 12%; right: 5%; }
+        .spot-2 { top: 45%; right: 2%; } .spot-3 { bottom: 12%; right: 5%; }
+        .spot-4 { bottom: 2%; left: 42%; } .spot-5 { bottom: 12%; left: 5%; }
+        .spot-6 { top: 45%; left: 2%; } .spot-7 { top: 12%; left: 5%; }
+
+        /* UI LAYER - FIXED HEIGHT FIX */
+        #ui-layer { 
+            height: 45%; background: rgba(10,10,10,0.98); 
+            border-top: 3px solid var(--gold); display: flex; flex-direction: column; 
+            padding: 10px; box-sizing: border-box;
         }
-
-        /* DICE */
-        .dice-reveal { position: absolute; display: flex; gap: 20px; z-index: 5; }
-        .die {
-            width: 40px; height: 40px; background: #fff; border-radius: 6px;
-            display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);
-            padding: 4px; box-sizing: border-box; box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
-        }
-        .dot { background: #111; border-radius: 50%; width: 6px; height: 6px; align-self: center; justify-self: center; }
-        .dot.red { background: #d32f2f; width: 10px; height: 10px; }
-
-        /* PLAYER SPOTS */
-        .player-spot { position: absolute; width: 70px; text-align: center; font-size: 0.75rem; font-weight: bold; transition: all 0.4s; z-index: 8; }
-        .coin-visual { width: 35px; height: 35px; border-radius: 50%; border: 2px solid #444; background: #222; color: #fff; display: flex; align-items: center; justify-content: center; margin: 0 auto 4px; font-size: 0.7rem; }
-
-        /* POSITIONING */
-        .spot-0 { top: 5%; left: 42%; } .spot-1 { top: 15%; right: 5%; }
-        .spot-2 { top: 50%; right: 2%; transform: translateY(-50%); } .spot-3 { bottom: 15%; right: 5%; }
-        .spot-4 { bottom: 5%; left: 42%; } .spot-5 { bottom: 15%; left: 5%; }
-        .spot-6 { top: 50%; left: 2%; transform: translateY(-50%); } .spot-7 { top: 15%; left: 5%; }
-
-        /* VFX */
-        .payout-particle { position: absolute; font-weight: bold; font-size: 1.5rem; pointer-events: none; z-index: 20; transition: all 1.2s ease-in-out; }
-        .dust { position: absolute; width: 100px; height: 100px; background: radial-gradient(circle, rgba(255,255,255,0.4) 0%, transparent 70%); border-radius: 50%; pointer-events: none; z-index: 9; opacity: 0; }
-        .shake-cam { animation: camShake 0.15s infinite; }
-        @keyframes camShake { 0%{transform: translate(2px, 2px)} 50%{transform: translate(-2px, -2px)} 100%{transform: translate(2px, -2px)} }
-        @keyframes poof { 0%{transform: scale(0.5); opacity: 1} 100%{transform: scale(2.5); opacity: 0} }
-
-        /* UI */
-        #ui-layer { flex: 1; background: rgba(10,10,10,0.98); padding: 15px; border-top: 3px solid var(--gold); overflow-y: auto; display: flex; flex-direction: column; }
         
-        /* SCROLLABLE SETUP AREA */
-        #setup-ui { display: flex; flex-direction: column; height: 100%; }
-        .setup-scroll-container { flex: 1; overflow-y: auto; margin-bottom: 10px; padding-right: 5px; }
-        .setup-grid { display: grid; grid-template-columns: 1fr; gap: 6px; }
-        .setup-item { background: #222; padding: 6px 10px; border-radius: 4px; border: 1px solid #444; display: flex; justify-content: space-between; align-items: center; }
-        .setup-item input { width: 100px; background: #000; color: #fff; border: 1px solid var(--gold); padding: 4px; border-radius: 3px; }
+        /* THE FIX: Player list scrolls, Start button stays */
+        #setup-ui { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+        .setup-scroll-area { flex-grow: 1; overflow-y: auto; margin-bottom: 10px; }
+        .setup-item { background: #222; padding: 8px; margin-bottom: 4px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid transparent; }
+        .setup-item input { width: 100px; background: #000; color: #fff; border: 1px solid #555; font-size: 0.9rem; }
         
-        .active-turn .coin-visual { border-color: var(--gold); background: #fff; color: #000; transform: scale(1.2); }
+        .start-btn { width: 100%; padding: 12px; background: var(--red); color: white; border: 2px solid var(--gold); font-weight: bold; font-size: 1rem; flex-shrink: 0; }
+
         .hidden { display: none !important; }
-        button { cursor: pointer; background: var(--red); color: white; border: 1px solid var(--gold); padding: 10px; border-radius: 4px; font-weight: bold; margin: 2px; }
-        
-        /* Fixed bottom button style */
-        .start-btn { width: 100%; padding: 15px; font-size: 1.1rem; flex-shrink: 0; }
+        button { cursor: pointer; border-radius: 4px; }
+        .payout-particle { position: absolute; font-weight: bold; font-size: 1.2rem; pointer-events: none; z-index: 20; transition: all 1.2s ease-in-out; }
+        .shake-cam { animation: camShake 0.1s infinite; }
+        @keyframes camShake { 0%{transform: translate(2px,0)} 50%{transform: translate(-2px,0)} 100%{transform: translate(2px,0)} }
     </style>
 </head>
 <body>
 
 <div id="game-view">
-    <div id="log-ticker">SET THE TABLE</div>
+    <div id="log-ticker">SELECT YOUR GAMBLERS</div>
 
     <div id="tatami">
-        <div id="dust-vfx" class="dust"></div>
         <div id="cup"></div>
         <div id="dice-reveal" class="dice-reveal hidden"></div>
         <div id="spots-container"></div>
@@ -85,33 +71,33 @@
 
     <div id="ui-layer">
         <div id="setup-ui">
-            <div class="setup-scroll-container">
-                <div id="setup-controls" class="setup-grid"></div>
+            <div class="setup-scroll-area">
+                <div id="setup-controls"></div>
             </div>
             <button class="start-btn" onclick="startGame()">OPEN THE DEN</button>
         </div>
 
         <div id="betting-ui" class="hidden" style="text-align:center;">
-            <h2 id="p-display-name" style="margin:0;"></h2>
-            <p id="p-display-money" style="color:var(--gold); margin:5px 0;"></p>
-            <div>
-                <button onclick="modBet(-50)">-50</button>
-                <input type="number" id="bet-amt" value="50" style="width:70px; text-align:center; background:#000; color:#fff; border:1px solid var(--gold); font-size:1.2rem;">
-                <button onclick="modBet(50)">+50</button>
+            <h2 id="p-display-name" style="margin:2px 0;"></h2>
+            <p id="p-display-money" style="color:var(--gold); margin:2px 0;"></p>
+            <div style="margin:10px 0;">
+                <button onclick="modBet(-50)" style="padding:10px 20px">-50</button>
+                <input type="number" id="bet-amt" value="50" style="width:60px; text-align:center; background:#000; color:#fff; font-size:1.2rem;">
+                <button onclick="modBet(50)" style="padding:10px 20px">+50</button>
             </div>
-            <div style="display:flex; gap:10px; margin-top:10px;">
-                <button onclick="placeBet('Chō')" style="flex:1">CHŌ (Even)</button>
-                <button onclick="placeBet('Han')" style="flex:1">HAN (Odd)</button>
-                <button onclick="withdraw()" style="background:#444">LEAVE</button>
+            <div style="display:flex; gap:5px;">
+                <button onclick="placeBet('Chō')" style="flex:1; padding:15px; background:var(--red); color:#fff;">CHŌ</button>
+                <button onclick="placeBet('Han')" style="flex:1; padding:15px; background:var(--red); color:#fff;">HAN</button>
+                <button onclick="withdraw()" style="padding:15px; background:#333; color:#fff;">LEAVE</button>
             </div>
         </div>
 
         <div id="results-ui" class="hidden" style="text-align:center;">
-            <h2 id="final-result-text" style="letter-spacing:5px; margin-top: 0;"></h2>
+            <h1 id="final-result-text" style="margin:5px 0; color:var(--gold);"></h1>
             <div id="action-btns" class="hidden">
-                <button id="call-cheat-btn" style="background:orange; color:#000; padding:12px;" onclick="callCheat()">CALL CHEAT!</button>
-                <button onclick="newRound()" style="padding:12px;">NEXT ROUND</button>
-                <button onclick="location.reload()" style="background:#444; padding:12px;">EXIT GAME</button>
+                <button onclick="callCheat()" style="background:orange; padding:15px; width:48%;">CALL CHEAT</button>
+                <button onclick="newRound()" style="background:var(--win); padding:15px; width:48%;">NEXT ROUND</button>
+                <button onclick="location.reload()" style="background:#444; width:100%; margin-top:5px; padding:10px;">EXIT TO MENU</button>
             </div>
         </div>
     </div>
@@ -122,40 +108,39 @@
     const diePatterns = [[], [4], [0, 8], [0, 4, 8], [0, 2, 6, 8], [0, 2, 4, 6, 8], [0, 2, 3, 5, 6, 8]];
     let players = [], bets = [], curIdx = 0, isCheating = false, roundResult = "";
 
-    // Generate Setup UI
     const setupBox = document.getElementById('setup-controls');
-    let config = Array(8).fill(false); // false = Human
+    let config = Array(8).fill(false);
 
     for(let i=0; i<8; i++) {
         const item = document.createElement('div');
         item.className = 'setup-item';
-        item.style.borderLeft = `4px solid ${colors[i]}`;
+        item.style.borderLeftColor = colors[i];
         item.innerHTML = `
-            <input type="text" id="name-${i}" value="Gambler ${i+1}">
-            <button onclick="toggleType(${i})" id="type-${i}" style="min-width:70px; font-size:0.7rem;">HUMAN</button>
+            <input type="text" id="name-${i}" value="Player ${i+1}">
+            <button onclick="toggleType(${i})" id="type-${i}" style="padding:8px 12px; background:#444; color:#fff; border:none;">HUMAN</button>
         `;
         setupBox.appendChild(item);
     }
 
     function toggleType(i) {
         config[i] = !config[i];
-        document.getElementById(`type-${i}`).innerText = config[i] ? "CPU" : "HUMAN";
-        document.getElementById(`type-${i}`).style.background = config[i] ? "#555" : "#8b0000";
+        const btn = document.getElementById(`type-${i}`);
+        btn.innerText = config[i] ? "CPU" : "HUMAN";
+        btn.style.background = config[i] ? "#777" : "#444";
     }
 
     function ticker(m) { document.getElementById('log-ticker').innerText = m; }
 
     function startGame() {
         players = config.map((isAI, i) => ({
-            name: document.getElementById(`name-${i}`).value.substring(0, 12),
+            name: document.getElementById(`name-${i}`).value,
             money: 1000, isAI: isAI, color: colors[i], active: true
         }));
         
-        const spotCont = document.getElementById('spots-container');
-        spotCont.innerHTML = players.map((p, i) => `
+        document.getElementById('spots-container').innerHTML = players.map((p, i) => `
             <div id="spot-${i}" class="player-spot spot-${i}">
                 <div class="coin-visual" id="coin-${i}">-</div>
-                <div style="color:${p.color}; white-space:nowrap; overflow:hidden;">${p.name}</div>
+                <div style="color:${p.color}">${p.name}</div>
             </div>
         `).join('');
 
@@ -172,7 +157,7 @@
         players.forEach((p, i) => {
             const c = document.getElementById(`coin-${i}`);
             c.innerText = "-"; c.style.background = "#222";
-            document.getElementById(`spot-${i}`).style.opacity = p.active ? "1" : "0.3";
+            document.getElementById(`spot-${i}`).style.opacity = (p.active && p.money > 0) ? "1" : "0.3";
         });
         nextTurn();
     }
@@ -181,23 +166,20 @@
         if(curIdx < 8) {
             let p = players[curIdx];
             if(!p.active || p.money <= 0) { curIdx++; nextTurn(); return; }
-
-            document.querySelectorAll('.player-spot').forEach(s => s.classList.remove('active-turn'));
-            document.getElementById(`spot-${curIdx}`).classList.add('active-turn');
+            document.querySelectorAll('.player-spot').forEach(s => s.style.transform = "scale(1)");
+            document.getElementById(`spot-${curIdx}`).style.transform = "scale(1.3)";
 
             if(p.isAI) {
-                ticker(p.name + " IS BETTING...");
+                ticker(p.name + " is thinking...");
                 setTimeout(() => {
-                    let type = Math.random() > 0.5 ? 'Chō' : 'Han';
-                    confirmBet(type, Math.min(Math.floor(Math.random()*100)+50, p.money));
-                }, 1000);
+                    confirmBet(Math.random() > 0.5 ? 'Chō' : 'Han', Math.min(100, p.money));
+                }, 800);
             } else {
-                ticker("YOUR TURN: " + p.name.toUpperCase());
+                ticker("Betting: " + p.name);
                 document.getElementById('betting-ui').classList.remove('hidden');
                 document.getElementById('p-display-name').innerText = p.name;
                 document.getElementById('p-display-name').style.color = p.color;
                 document.getElementById('p-display-money').innerText = p.money + " Mon";
-                document.getElementById('bet-amt').value = 50;
             }
         } else {
             document.getElementById('betting-ui').classList.add('hidden');
@@ -214,19 +196,18 @@
 
     function withdraw() {
         players[curIdx].active = false;
-        ticker(players[curIdx].name + " LEFT THE TABLE");
         document.getElementById('betting-ui').classList.add('hidden');
-        curIdx++;
-        nextTurn();
+        curIdx++; nextTurn();
     }
 
     function confirmBet(t, a) {
         bets[curIdx] = { type: t, amt: a };
-        document.getElementById(`coin-${curIdx}`).innerText = a;
-        document.getElementById(`coin-${curIdx}`).style.background = (t === 'Chō') ? '#444' : '#888';
+        const c = document.getElementById(`coin-${curIdx}`);
+        c.innerText = a;
+        c.style.background = (t === 'Chō') ? '#444' : '#888';
         document.getElementById('betting-ui').classList.add('hidden');
         curIdx++;
-        setTimeout(nextTurn, 500);
+        setTimeout(nextTurn, 400);
     }
 
     function drawDie(val, container) {
@@ -244,77 +225,54 @@
 
     function reveal() {
         document.getElementById('tatami').classList.add('shake-cam');
-        ticker("DEALER SHAKES THE CUP...");
-
+        ticker("SHAKING...");
         setTimeout(() => {
             document.getElementById('tatami').classList.remove('shake-cam');
-            document.getElementById('cup').style.transform = "translate(0, -350px)"; 
-            
-            const dust = document.getElementById('dust-vfx');
-            dust.style.opacity = "1";
-            dust.style.animation = "poof 0.6s forwards";
-            
-            const d1 = Math.floor(Math.random()*6)+1;
-            let d2 = Math.floor(Math.random()*6)+1;
+            document.getElementById('cup').style.transform = "translateY(-400px)"; 
+            const d1 = Math.floor(Math.random()*6)+1, d2 = Math.floor(Math.random()*6)+1;
             if(Math.random() < 0.15) isCheating = true;
-
             const diceBox = document.getElementById('dice-reveal');
-            diceBox.innerHTML = '';
-            drawDie(d1, diceBox); drawDie(d2, diceBox);
+            diceBox.innerHTML = ''; drawDie(d1, diceBox); drawDie(d2, diceBox);
             diceBox.classList.remove('hidden');
-            
             roundResult = ((d1+d2) % 2 === 0) ? 'Chō' : 'Han';
-            ticker("RESULT IS " + roundResult.toUpperCase());
+            ticker("RESULT: " + roundResult.toUpperCase());
             setTimeout(animateResults, 1000);
-        }, 1500);
+        }, 1200);
     }
 
     async function animateResults() {
         document.getElementById('results-ui').classList.remove('hidden');
         document.getElementById('final-result-text').innerText = roundResult.toUpperCase();
-
         for(let i=0; i<8; i++) {
             if(!bets[i] || !players[i].active) continue;
             const won = bets[i].type === roundResult;
-            ticker(`${players[i].name.toUpperCase()}: YOU ${won ? 'WIN' : 'LOSE'}!`);
-            
-            const spot = document.getElementById(`spot-${i}`);
-            const coin = document.getElementById(`coin-${i}`);
-            
+            ticker(`${players[i].name}: ${won ? 'WIN' : 'LOSE'}`);
             const p = document.createElement('div');
             p.className = 'payout-particle';
             p.innerText = won ? "+" + bets[i].amt : "-" + bets[i].amt;
             p.style.color = won ? 'var(--win)' : 'var(--lose)';
             p.style.left = '50%'; p.style.top = '50%';
             document.getElementById('tatami').appendChild(p);
-
-            const rect = spot.getBoundingClientRect();
+            const rect = document.getElementById(`spot-${i}`).getBoundingClientRect();
             const matRect = document.getElementById('tatami').getBoundingClientRect();
-            
-            await new Promise(r => setTimeout(r, 100));
-            p.style.left = (rect.left - matRect.left + 25) + 'px';
-            p.style.top = (rect.top - matRect.top + 10) + 'px';
-            p.style.opacity = '0';
-            
-            coin.style.background = won ? 'var(--win)' : 'var(--lose)';
-            if(won) players[i].money += bets[i].amt; else players[i].money -= bets[i].amt;
-
-            await new Promise(r => setTimeout(r, 1500)); 
+            setTimeout(() => {
+                p.style.left = (rect.left - matRect.left + 20) + 'px';
+                p.style.top = (rect.top - matRect.top + 10) + 'px';
+                p.style.opacity = '0';
+                document.getElementById(`coin-${i}`).style.background = won ? 'var(--win)' : 'var(--lose)';
+                if(won) players[i].money += bets[i].amt; else players[i].money -= bets[i].amt;
+            }, 50);
+            await new Promise(r => setTimeout(r, 1400));
             p.remove();
         }
         document.getElementById('action-btns').classList.remove('hidden');
-        ticker("PLACE YOUR NEXT BETS");
     }
 
     function callCheat() {
-        document.getElementById('call-cheat-btn').classList.add('hidden');
-        if(isCheating) {
-            ticker("CAUGHT! DEALER PAYS REPARATIONS!");
-            players.forEach((p, i) => { if(bets[i]) p.money += (bets[i].amt * 2); });
-        } else {
-            ticker("LIES! THE DEALER FINES THE DEN!");
-            players.forEach(p => p.money = Math.floor(p.money * 0.5));
-        }
+        if(isCheating) { ticker("CAUGHT! DEALER PAYS!"); players.forEach((p, i) => { if(bets[i]) p.money += (bets[i].amt * 2); }); }
+        else { ticker("FALSE! 50% FINE!"); players.forEach(p => p.money = Math.floor(p.money * 0.5)); }
+        document.getElementById('action-btns').classList.add('hidden');
+        setTimeout(() => document.getElementById('action-btns').classList.remove('hidden'), 1000);
     }
 </script>
 </body>
