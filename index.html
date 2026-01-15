@@ -17,7 +17,7 @@
             background: var(--wood); display: flex; flex-direction: column; position: relative; 
         }
 
-        #log-ticker { height: 40px; background: #000; color: var(--gold); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; border-bottom: 2px solid var(--gold); text-transform: uppercase; text-align: center; z-index: 30; flex-shrink: 0; }
+        #log-ticker { height: 40px; background: #000; color: var(--gold); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; border-bottom: 2px solid var(--gold); text-transform: uppercase; flex-shrink: 0; }
 
         /* THE TATAMI */
         #tatami { flex: 1; background: var(--tatami); margin: 5px; border: 8px solid #3d2b1f; position: relative; display: flex; justify-content: center; align-items: center; overflow: hidden; }
@@ -28,6 +28,7 @@
         .dot { background: #111; border-radius: 50%; width: 5px; height: 5px; align-self: center; justify-self: center; }
         .dot.red { background: #d32f2f; width: 8px; height: 8px; }
 
+        /* SPOTS */
         .player-spot { position: absolute; width: 60px; text-align: center; font-size: 0.65rem; font-weight: bold; transition: all 0.4s; }
         .coin-visual { width: 28px; height: 28px; border-radius: 50%; border: 1px solid #444; background: #222; color: #fff; display: flex; align-items: center; justify-content: center; margin: 0 auto 2px; }
 
@@ -36,20 +37,18 @@
         .spot-4 { bottom: 2%; left: 42%; } .spot-5 { bottom: 12%; left: 5%; }
         .spot-6 { top: 45%; left: 2%; } .spot-7 { top: 12%; left: 5%; }
 
-        /* UI LAYER - FIXED HEIGHT FIX */
+        /* SCROLLABLE UI LAYER */
         #ui-layer { 
-            height: 45%; background: rgba(10,10,10,0.98); 
-            border-top: 3px solid var(--gold); display: flex; flex-direction: column; 
+            height: 40%; background: rgba(10,10,10,0.98); 
+            border-top: 3px solid var(--gold); overflow-y: auto; 
             padding: 10px; box-sizing: border-box;
         }
         
-        /* THE FIX: Player list scrolls, Start button stays */
-        #setup-ui { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
-        .setup-scroll-area { flex-grow: 1; overflow-y: auto; margin-bottom: 10px; }
-        .setup-item { background: #222; padding: 8px; margin-bottom: 4px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid transparent; }
-        .setup-item input { width: 100px; background: #000; color: #fff; border: 1px solid #555; font-size: 0.9rem; }
+        #setup-ui { display: flex; flex-direction: column; gap: 6px; }
+        .setup-item { background: #222; padding: 10px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid transparent; }
+        .setup-item input { width: 120px; background: #000; color: #fff; border: 1px solid #555; padding: 5px; font-size: 1rem; }
         
-        .start-btn { width: 100%; padding: 12px; background: var(--red); color: white; border: 2px solid var(--gold); font-weight: bold; font-size: 1rem; flex-shrink: 0; }
+        .start-btn { width: 100%; padding: 18px; background: var(--red); color: white; border: 2px solid var(--gold); font-weight: bold; font-size: 1.2rem; margin-top: 10px; margin-bottom: 20px; }
 
         .hidden { display: none !important; }
         button { cursor: pointer; border-radius: 4px; }
@@ -61,7 +60,7 @@
 <body>
 
 <div id="game-view">
-    <div id="log-ticker">SELECT YOUR GAMBLERS</div>
+    <div id="log-ticker">PREPARE FOR BATTLE</div>
 
     <div id="tatami">
         <div id="cup"></div>
@@ -71,9 +70,7 @@
 
     <div id="ui-layer">
         <div id="setup-ui">
-            <div class="setup-scroll-area">
-                <div id="setup-controls"></div>
-            </div>
+            <div id="setup-controls"></div>
             <button class="start-btn" onclick="startGame()">OPEN THE DEN</button>
         </div>
 
@@ -81,13 +78,13 @@
             <h2 id="p-display-name" style="margin:2px 0;"></h2>
             <p id="p-display-money" style="color:var(--gold); margin:2px 0;"></p>
             <div style="margin:10px 0;">
-                <button onclick="modBet(-50)" style="padding:10px 20px">-50</button>
+                <button onclick="modBet(-50)" style="padding:10px 15px">-50</button>
                 <input type="number" id="bet-amt" value="50" style="width:60px; text-align:center; background:#000; color:#fff; font-size:1.2rem;">
-                <button onclick="modBet(50)" style="padding:10px 20px">+50</button>
+                <button onclick="modBet(50)" style="padding:10px 15px">+50</button>
             </div>
             <div style="display:flex; gap:5px;">
-                <button onclick="placeBet('Chō')" style="flex:1; padding:15px; background:var(--red); color:#fff;">CHŌ</button>
-                <button onclick="placeBet('Han')" style="flex:1; padding:15px; background:var(--red); color:#fff;">HAN</button>
+                <button onclick="placeBet('Chō')" style="flex:1; padding:15px; background:var(--red); color:#fff; font-weight:bold;">CHŌ</button>
+                <button onclick="placeBet('Han')" style="flex:1; padding:15px; background:var(--red); color:#fff; font-weight:bold;">HAN</button>
                 <button onclick="withdraw()" style="padding:15px; background:#333; color:#fff;">LEAVE</button>
             </div>
         </div>
@@ -95,9 +92,9 @@
         <div id="results-ui" class="hidden" style="text-align:center;">
             <h1 id="final-result-text" style="margin:5px 0; color:var(--gold);"></h1>
             <div id="action-btns" class="hidden">
-                <button onclick="callCheat()" style="background:orange; padding:15px; width:48%;">CALL CHEAT</button>
-                <button onclick="newRound()" style="background:var(--win); padding:15px; width:48%;">NEXT ROUND</button>
-                <button onclick="location.reload()" style="background:#444; width:100%; margin-top:5px; padding:10px;">EXIT TO MENU</button>
+                <button onclick="callCheat()" style="background:orange; padding:15px; width:48%; font-weight:bold;">CALL CHEAT</button>
+                <button onclick="newRound()" style="background:var(--win); padding:15px; width:48%; font-weight:bold; color:white;">NEXT ROUND</button>
+                <button onclick="location.reload()" style="background:#444; width:100%; margin-top:8px; padding:10px; color:white;">EXIT TO MENU</button>
             </div>
         </div>
     </div>
@@ -117,7 +114,7 @@
         item.style.borderLeftColor = colors[i];
         item.innerHTML = `
             <input type="text" id="name-${i}" value="Player ${i+1}">
-            <button onclick="toggleType(${i})" id="type-${i}" style="padding:8px 12px; background:#444; color:#fff; border:none;">HUMAN</button>
+            <button onclick="toggleType(${i})" id="type-${i}" style="padding:10px 15px; background:#444; color:#fff; border:none; font-weight:bold;">HUMAN</button>
         `;
         setupBox.appendChild(item);
     }
@@ -158,6 +155,7 @@
             const c = document.getElementById(`coin-${i}`);
             c.innerText = "-"; c.style.background = "#222";
             document.getElementById(`spot-${i}`).style.opacity = (p.active && p.money > 0) ? "1" : "0.3";
+            document.getElementById(`spot-${i}`).style.transform = "scale(1)";
         });
         nextTurn();
     }
@@ -180,6 +178,7 @@
                 document.getElementById('p-display-name').innerText = p.name;
                 document.getElementById('p-display-name').style.color = p.color;
                 document.getElementById('p-display-money').innerText = p.money + " Mon";
+                document.getElementById('ui-layer').scrollTop = 0; // Ensure betting UI is at top
             }
         } else {
             document.getElementById('betting-ui').classList.add('hidden');
@@ -225,7 +224,7 @@
 
     function reveal() {
         document.getElementById('tatami').classList.add('shake-cam');
-        ticker("SHAKING...");
+        ticker("DEALER IS SHAKING...");
         setTimeout(() => {
             document.getElementById('tatami').classList.remove('shake-cam');
             document.getElementById('cup').style.transform = "translateY(-400px)"; 
