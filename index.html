@@ -3,242 +3,318 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chō-Han: Edo Dice Game</title>
+    <title>Chō-Han: Tatami Den</title>
     <style>
         :root {
-            --edo-red: #b32d2e;
-            --gold: #d4af37;
-            --ink: #1a1a1b;
-            --paper: #f4e4bc;
-            --win-green: #2d5a27;
+            --tatami: #b5ad8c;
+            --wood: #3d2b1f;
+            --edo-red: #9e1b1b;
+            --gold: #ffd700;
         }
 
         body {
-            background-color: var(--ink);
-            color: var(--paper);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #111;
+            color: #fff;
+            font-family: 'Courier New', Courier, monospace;
+            margin: 0;
+            overflow: hidden;
             display: flex;
             justify-content: center;
-            padding: 20px;
-            transition: background-color 0.5s ease;
         }
 
-        .game-container {
-            width: 100%;
-            max-width: 450px;
-            background: #252525;
-            border: 3px solid var(--gold);
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-            text-align: center;
+        /* THE TATAMI ROOM */
+        #game-stage {
+            width: 100vw;
+            max-width: 500px;
+            height: 100vh;
+            background: var(--tatami);
+            border-left: 20px solid var(--wood);
+            border-right: 20px solid var(--wood);
+            position: relative;
+            box-shadow: inset 0 0 100px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
-        h1 { color: var(--edo-red); letter-spacing: 4px; border-bottom: 1px solid var(--gold); padding-bottom: 10px; }
-        .hidden { display: none; }
+        /* DICE & CUP AREA */
+        #table-center {
+            margin-top: 20%;
+            height: 200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
 
-        /* UI Elements */
-        .instruction-box { font-size: 0.9rem; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px; margin-bottom: 20px; text-align: left; }
-        input, select { padding: 12px; margin: 10px 0; width: 80%; border-radius: 8px; border: 1px solid var(--gold); background: #111; color: white; }
-        
-        button {
-            background: var(--edo-red);
-            color: white;
-            border: 2px solid var(--gold);
-            padding: 15px 30px;
-            font-weight: bold;
-            text-transform: uppercase;
+        .cup {
+            font-size: 80px;
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             cursor: pointer;
-            margin: 10px;
+            z-index: 10;
+        }
+
+        .dice-reveal { font-size: 50px; margin-top: -40px; }
+
+        /* COIN PILE VFX */
+        #pot-area {
+            font-size: 24px;
+            color: var(--gold);
+            text-shadow: 2px 2px #000;
+        }
+
+        /* OVERLAY UI */
+        .overlay {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            background: rgba(0,0,0,0.85);
+            border-top: 3px solid var(--gold);
+            padding: 20px 0;
+            text-align: center;
+            z-index: 20;
+        }
+
+        .bet-stepper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .btn-small { background: #444; padding: 10px; min-width: 45px; }
+        .btn-bet { background: var(--edo-red); padding: 15px 30px; font-weight: bold; width: 120px; }
+        input { width: 80px; text-align: center; font-size: 1.2rem; background: #000; color: var(--gold); border: 1px solid var(--gold); }
+
+        .hidden { display: none !important; }
+        .shaking { animation: rumble 0.1s infinite; }
+        @keyframes rumble {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            50% { transform: translate(-1px, -1px) rotate(1deg); }
+            100% { transform: translate(1px, -1px) rotate(-1deg); }
+        }
+
+        /* FEEDBACK TEXT */
+        #announcer {
+            position: absolute;
+            top: 10%;
+            width: 80%;
+            background: rgba(158, 27, 27, 0.9);
+            padding: 10px;
             border-radius: 5px;
+            text-align: center;
+            font-weight: bold;
         }
 
-        button:active { transform: scale(0.95); }
-
-        /* Betting Area */
-        .stats { color: var(--gold); font-size: 1.2rem; margin-bottom: 10px; }
-        .bet-buttons { display: flex; justify-content: center; gap: 10px; }
-
-        /* VFX */
-        .dice-reveal { font-size: 5rem; margin: 20px 0; min-height: 120px; }
-        .shaking { animation: shake 0.15s infinite; }
-        @keyframes shake {
-            0% { transform: rotate(1deg) scale(1.1); }
-            50% { transform: rotate(-1deg) scale(1.1); }
-            100% { transform: rotate(1deg) scale(1.1); }
+        .cheat-btn {
+            background: #ffa500;
+            color: #000;
+            font-weight: bold;
+            padding: 5px 10px;
+            position: absolute;
+            top: 40%;
+            right: 10px;
         }
-
-        .flash-win { background-color: var(--win-green) !important; }
-        .flash-loss { background-color: var(--edo-red) !important; }
-
-        .result-row { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #444; }
     </style>
 </head>
 <body>
 
-<div class="game-container" id="game-ui">
-    <h1>CHŌ-HAN</h1>
+<div id="game-stage">
+    <div id="announcer">WELCOME TO THE DEN</div>
 
-    <div id="setup-screen">
-        <div class="instruction-box">
-            <strong>HOW TO PLAY:</strong><br>
-            1. Pick the number of players.<br>
-            2. Each gets a random starting purse.<br>
-            3. Bet on <strong>CHŌ</strong> (Even) or <strong>HAN</strong> (Odd).<br>
-            4. If you win, you double your bet!
-        </div>
-        <p>Select Gamblers:</p>
-        <select id="player-count">
-            <option value="1">1 Player</option>
-            <option value="2">2 Players</option>
-            <option value="4">4 Players</option>
-            <option value="8">8 Players</option>
+    <div id="table-center">
+        <div id="pot-area">💰 0</div>
+        <div id="cup" class="cup">🏺</div>
+        <div id="dice-display" class="dice-reveal hidden">⚀ ⚀</div>
+    </div>
+
+    <button id="call-out" class="cheat-btn hidden" onclick="handleCallOut()">CALL OUT CHEAT!</button>
+
+    <div id="setup-screen" class="overlay">
+        <h3>Number of Gamblers</h3>
+        <select id="p-count">
+            <option value="1">1</option><option value="2">2</option><option value="4">4</option><option value="8">8</option>
         </select>
-        <div id="name-fields"></div>
-        <button onclick="initPlayers()">START GAME</button>
+        <button class="btn-bet" onclick="initGame()">START</button>
     </div>
 
-    <div id="betting-screen" class="hidden">
-        <h2 id="turn-display">Player's Turn</h2>
-        <div class="stats">Purse: <span id="purse-display">0</span> Mon</div>
-        <input type="number" id="bet-amount" placeholder="Enter Bet Amount" min="1">
+    <div id="betting-ui" class="overlay hidden">
+        <h2 id="p-name">Player</h2>
+        <p>Purse: <span id="p-money" style="color:var(--gold)">0</span> Mon</p>
+        
+        <div class="bet-stepper">
+            <button class="btn-small" onclick="adjustBet(-50)">-50</button>
+            <input type="number" id="bet-input" value="100">
+            <button class="btn-small" onclick="adjustBet(50)">+50</button>
+        </div>
+
         <div class="bet-buttons">
-            <button onclick="submitBet('Chō')" style="background:#444">CHŌ<br>(Even)</button>
-            <button onclick="submitBet('Han')" style="background:#444">HAN<br>(Odd)</button>
+            <button class="btn-bet" onclick="placeBet('Chō')">CHŌ (Even)</button>
+            <button class="btn-bet" onclick="placeBet('Han')">HAN (Odd)</button>
         </div>
     </div>
 
-    <div id="reveal-screen" class="hidden">
-        <div id="dice-visual" class="dice-reveal">🏮</div>
-        <h2 id="outcome-text">Shaking the cup...</h2>
-        <div id="leaderboard"></div>
-        <button id="next-btn" class="hidden" onclick="startNewRound()">NEXT ROUND</button>
+    <div id="reveal-ui" class="overlay hidden">
+        <h2 id="round-res">---</h2>
+        <div id="leaderboard" style="font-size: 0.8rem; max-height: 100px; overflow-y: auto;"></div>
+        <button id="next-round-btn" class="btn-bet hidden" onclick="nextRound()">NEXT ROUND</button>
     </div>
 </div>
 
 <script>
     let players = [];
-    let currentBets = [];
-    let currentPlayerIdx = 0;
+    let bets = [];
+    let currentIdx = 0;
+    let houseCheated = false;
+    let roundResult = "";
 
-    // Build name inputs
-    document.getElementById('player-count').addEventListener('change', (e) => {
-        const div = document.getElementById('name-fields');
-        div.innerHTML = '';
-        for(let i=1; i<=e.target.value; i++) {
-            div.innerHTML += `<input type="text" id="name-${i}" value="Player ${i}">`;
-        }
-    });
-    document.getElementById('player-count').dispatchEvent(new Event('change'));
-
-    function initPlayers() {
-        const count = document.getElementById('player-count').value;
-        players = [];
+    function initGame() {
+        const count = document.getElementById('p-count').value;
         for(let i=1; i<=count; i++) {
-            players.push({
-                name: document.getElementById(`name-${i}`).value,
-                money: Math.floor(Math.random() * 1000) + 500 // Random 500-1500
-            });
+            players.push({ name: "Player "+i, money: Math.floor(Math.random()*1000)+500, bankrupt: false });
         }
         document.getElementById('setup-screen').classList.add('hidden');
-        startNewRound();
+        startRound();
     }
 
-    function startNewRound() {
-        currentPlayerIdx = 0;
-        currentBets = [];
-        document.body.className = '';
-        document.getElementById('reveal-screen').classList.add('hidden');
-        document.getElementById('next-btn').classList.add('hidden');
-        updateBettingUI();
+    function startRound() {
+        currentIdx = 0;
+        bets = [];
+        houseCheated = false;
+        document.getElementById('pot-area').innerText = "💰 0";
+        document.getElementById('cup').classList.remove('hidden');
+        document.getElementById('cup').style.transform = "translateY(0)";
+        document.getElementById('dice-display').classList.add('hidden');
+        document.getElementById('next-round-btn').classList.add('hidden');
+        document.getElementById('call-out').classList.add('hidden');
+        nextPlayerBet();
     }
 
-    function updateBettingUI() {
-        if (currentPlayerIdx < players.length) {
-            const p = players[currentPlayerIdx];
-            if (p.money <= 0) {
-                // Skip bankrupt players
-                currentBets.push({ type: 'Chō', amount: 0, bankrupt: true });
-                currentPlayerIdx++;
-                updateBettingUI();
-                return;
+    function adjustBet(val) {
+        let input = document.getElementById('bet-input');
+        let newVal = parseInt(input.value) + val;
+        if (newVal < 10) newVal = 10;
+        if (newVal > players[currentIdx].money) newVal = players[currentIdx].money;
+        input.value = newVal;
+    }
+
+    function nextPlayerBet() {
+        if (currentIdx < players.length) {
+            if (players[currentIdx].bankrupt) {
+                currentIdx++; nextPlayerBet(); return;
             }
-            document.getElementById('betting-screen').classList.remove('hidden');
-            document.getElementById('turn-display').innerText = `${p.name}'s Bet`;
-            document.getElementById('purse-display').innerText = p.money;
-            document.getElementById('bet-amount').value = Math.floor(p.money / 2);
-            document.getElementById('bet-amount').max = p.money;
+            document.getElementById('betting-ui').classList.remove('hidden');
+            document.getElementById('reveal-ui').classList.add('hidden');
+            document.getElementById('p-name').innerText = players[currentIdx].name;
+            document.getElementById('p-money').innerText = players[currentIdx].money;
         } else {
-            document.getElementById('betting-screen').classList.add('hidden');
-            handleReveal();
+            document.getElementById('betting-ui').classList.add('hidden');
+            runDiceAnimation();
         }
     }
 
-    function submitBet(type) {
-        const amt = parseInt(document.getElementById('bet-amount').value);
-        const p = players[currentPlayerIdx];
-
-        if (isNaN(amt) || amt <= 0 || amt > p.money) {
-            alert("Invalid bet amount!");
-            return;
-        }
-
-        currentBets.push({ type: type, amount: amt });
-        currentPlayerIdx++;
-        updateBettingUI();
+    function placeBet(type) {
+        const amt = parseInt(document.getElementById('bet-input').value);
+        bets.push({ type: type, amt: amt });
+        let currentPot = parseInt(document.getElementById('pot-area').innerText.split(' ')[1]);
+        document.getElementById('pot-area').innerText = "💰 " + (currentPot + amt);
+        currentIdx++;
+        nextPlayerBet();
     }
 
-    function handleReveal() {
-        document.getElementById('reveal-screen').classList.remove('hidden');
-        const visual = document.getElementById('dice-visual');
-        const status = document.getElementById('outcome-text');
-        
-        visual.innerText = "🎲🎲";
-        visual.classList.add('shaking');
-        status.innerText = "The dealer slams the cup!";
+    function runDiceAnimation() {
+        document.getElementById('announcer').innerText = "THE DEALER SHAKES...";
+        const cup = document.getElementById('cup');
+        cup.classList.add('shaking');
 
         setTimeout(() => {
-            visual.classList.remove('shaking');
-            const d1 = Math.floor(Math.random() * 6) + 1;
-            const d2 = Math.floor(Math.random() * 6) + 1;
+            cup.classList.remove('shaking');
+            cup.style.transform = "translateY(-100px)"; // Lift cup
+            
+            const d1 = Math.floor(Math.random()*6)+1;
+            let d2 = Math.floor(Math.random()*6)+1;
+            
+            // Dealer Logic: 20% chance to cheat if it helps the house
+            if (Math.random() < 0.2) {
+                houseCheated = true;
+                d2 = (d2 % 6) + 1; // Dealer nudges the die
+            }
+
             const sum = d1 + d2;
-            const result = (sum % 2 === 0) ? 'Chō' : 'Han';
+            roundResult = (sum % 2 === 0) ? 'Chō' : 'Han';
             const icons = ['','⚀','⚁','⚂','⚃','⚄','⚅'];
             
-            visual.innerText = `${icons[d1]} ${icons[d2]}`;
-            status.innerText = `TOTAL: ${sum} (${result.toUpperCase()})`;
-
-            processResults(result);
-        }, 1800);
+            document.getElementById('dice-display').innerText = `${icons[d1]} ${icons[d2]}`;
+            document.getElementById('dice-display').classList.remove('hidden');
+            document.getElementById('announcer').innerText = `RESULT: ${roundResult.toUpperCase()}`;
+            
+            // Give window to call out cheat
+            document.getElementById('call-out').classList.remove('hidden');
+            setTimeout(processEndRound, 2500);
+        }, 1500);
     }
 
-    function processResults(result) {
-        const board = document.getElementById('leaderboard');
-        board.innerHTML = "<h3>ROUND RESULTS</h3>";
-        let groupWon = false;
+    function handleCallOut() {
+        document.getElementById('call-out').classList.add('hidden');
+        if (houseCheated) {
+            document.getElementById('announcer').innerText = "CAUGHT! DEALER PAYS TRIPLE!";
+            applyResults(true);
+        } else {
+            document.getElementById('announcer').innerText = "FALSE ACCUSATION! YOU LOSE!";
+            applyResults(false, true);
+        }
+    }
 
+    function processEndRound() {
+        if (!document.getElementById('call-out').classList.contains('hidden')) {
+            document.getElementById('call-out').classList.add('hidden');
+            applyResults(false);
+        }
+    }
+
+    function applyResults(caughtCheat, falseAccuse = false) {
+        const reveal = document.getElementById('reveal-ui');
+        const board = document.getElementById('leaderboard');
+        reveal.classList.remove('hidden');
+        board.innerHTML = "";
+        
         players.forEach((p, i) => {
-            const bet = currentBets[i];
-            let rowText = "";
+            if (p.bankrupt) return;
+            const b = bets[i];
+            let win = (b.type === roundResult);
             
-            if (bet.bankrupt) {
-                rowText = `<div class="result-row" style="opacity:0.5"><span>${p.name}</span><span>BANKRUPT</span></div>`;
-            } else if (bet.type === result) {
-                p.money += bet.amount;
-                groupWon = true;
-                rowText = `<div class="result-row" style="color:#4caf50"><span>${p.name}</span><span>+${bet.amount} Mon</span></div>`;
+            if (caughtCheat) {
+                p.money += (b.amt * 3);
+                board.innerHTML += `<div>${p.name}: +${b.amt*3} (TRIPLE)</div>`;
+            } else if (falseAccuse) {
+                p.money = 0;
+                p.bankrupt = true;
+                board.innerHTML += `<div>${p.name}: EXILED (FALSE CLAIM)</div>`;
+            } else if (win) {
+                p.money += b.amt;
+                board.innerHTML += `<div>${p.name}: +${b.amt}</div>`;
             } else {
-                p.money -= bet.amount;
-                rowText = `<div class="result-row" style="color:#ff5252"><span>${p.name}</span><span>-${bet.amount} Mon</span></div>`;
+                p.money -= b.amt;
+                board.innerHTML += `<div>${p.name}: -${b.amt}</div>`;
+                if (p.money <= 0) { p.money = 0; p.bankrupt = true; }
             }
-            board.innerHTML += rowText;
         });
 
-        // VFX: Flash screen
-        document.body.className = groupWon ? 'flash-win' : 'flash-loss';
-        setTimeout(() => { document.body.className = ''; }, 600);
+        document.getElementById('next-round-btn').classList.remove('hidden');
+        checkGameOver();
+    }
 
-        document.getElementById('next-btn').classList.remove('hidden');
+    function checkGameOver() {
+        const active = players.filter(p => !p.bankrupt);
+        if (active.length === 0) {
+            document.getElementById('announcer').innerText = "GAME OVER: THE HOUSE TOOK EVERYTHING";
+            document.getElementById('next-round-btn').classList.add('hidden');
+        }
+    }
+
+    function nextRound() {
+        startRound();
     }
 </script>
 
