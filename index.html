@@ -17,41 +17,57 @@
             background: var(--wood); display: flex; flex-direction: column; position: relative; 
         }
 
-        /* FIXED SETUP SCREEN */
+        /* NEW FIXED SETUP SCREEN LOGIC */
         #setup-screen {
-            position: absolute; top:0; left:0; right:0; bottom:0;
+            position: absolute; inset: 0;
             background: #111; z-index: 1000;
-            display: flex; flex-direction: column; padding: 15px; box-sizing: border-box;
+            display: flex; flex-direction: column;
         }
-        .setup-list { flex: 1; overflow-y: auto; padding-bottom: 20px; }
+
+        .setup-content {
+            flex: 1; /* Takes all space except header and footer */
+            overflow-y: auto; /* This makes ONLY the player list scroll */
+            padding: 15px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .setup-footer {
+            height: 80px;
+            background: #1a1a1a;
+            border-top: 2px solid var(--gold);
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0; /* Prevents the footer from shrinking */
+        }
+
         .setup-row { 
             background: #222; padding: 12px; border-radius: 8px; 
             display: flex; justify-content: space-between; align-items: center; 
             margin-bottom: 8px; border-left: 5px solid; 
         }
-        .setup-row input { background: #000; color: #fff; border: 1px solid #444; padding: 8px; width: 50%; border-radius: 4px; }
-        .type-btn { padding: 10px; min-width: 80px; background: #333; color: white; border: 1px solid var(--gold); border-radius: 4px; font-weight: bold; }
+        .setup-row input { background: #000; color: #fff; border: 1px solid #444; padding: 8px; width: 55%; border-radius: 4px; }
+        .type-btn { padding: 10px; min-width: 75px; background: #333; color: white; border: 1px solid var(--gold); border-radius: 4px; font-size: 0.8rem; }
 
+        .start-btn { 
+            width: 100%; height: 100%;
+            background: var(--red); color: white; border: 2px solid var(--gold); 
+            font-weight: bold; font-size: 1.2rem; border-radius: 8px; 
+        }
+
+        /* TATAMI & GAMEPLAY */
         #log-ticker { height: 40px; background: #000; color: var(--gold); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; border-bottom: 2px solid var(--gold); text-transform: uppercase; flex-shrink: 0; }
-
-        /* THE TATAMI */
         #tatami { flex: 1.2; background: var(--tatami); margin: 5px; border: 8px solid #3d2b1f; position: relative; display: flex; justify-content: center; align-items: center; overflow: hidden; }
-
-        #cup { width: 70px; height: 90px; background: #5d4037; border-radius: 35px 35px 5px 5px; border: 4px solid #3e2723; position: relative; z-index: 10; transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
-        .die { width: 35px; height: 35px; background: #fff; border-radius: 4px; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 3px; box-sizing: border-box; box-shadow: 2px 2px 5px rgba(0,0,0,0.5); }
+        #cup { width: 70px; height: 90px; background: #5d4037; border-radius: 35px 35px 5px 5px; border: 4px solid #3e2723; position: relative; z-index: 10; transition: transform 0.8s; }
+        .die { width: 35px; height: 35px; background: #fff; border-radius: 4px; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 3px; box-sizing: border-box; }
         .dot { background: #111; border-radius: 50%; width: 5px; height: 5px; align-self: center; justify-self: center; }
         .dot.red { background: #d32f2f; width: 8px; height: 8px; }
 
-        /* SPOTS & SHOUTS */
-        .player-spot { position: absolute; width: 65px; text-align: center; font-size: 0.7rem; font-weight: bold; transition: all 0.4s; z-index: 5; }
-        .coin-visual { width: 30px; height: 30px; border-radius: 50%; border: 1px solid #444; background: #222; color: #fff; display: flex; align-items: center; justify-content: center; margin: 0 auto 2px; }
+        .player-spot { position: absolute; width: 65px; text-align: center; font-size: 0.7rem; font-weight: bold; transition: 0.4s; }
+        .coin-visual { width: 30px; height: 30px; border-radius: 50%; border: 1px solid #444; background: #222; display: flex; align-items: center; justify-content: center; margin: 0 auto 2px; }
         
-        .shout-bubble {
-            position: absolute; top: -15px; left: 50%; transform: translateX(-50%) scale(0);
-            background: #fff; color: #000; padding: 2px 8px; border-radius: 10px;
-            font-size: 0.6rem; font-weight: 900; transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            z-index: 20; box-shadow: 0 2px 5px rgba(0,0,0,0.5);
-        }
+        .shout-bubble { position: absolute; top: -15px; left: 50%; transform: translateX(-50%) scale(0); background: #fff; color: #000; padding: 2px 8px; border-radius: 10px; font-size: 0.6rem; font-weight: 900; transition: 0.3s; z-index: 20; }
         .shout-active { transform: translateX(-50%) scale(1); }
 
         .spot-0 { top: 2%; left: 42%; } .spot-1 { top: 12%; right: 5%; }
@@ -59,23 +75,25 @@
         .spot-4 { bottom: 2%; left: 42%; } .spot-5 { bottom: 12%; left: 5%; }
         .spot-6 { top: 45%; left: 2%; } .spot-7 { top: 12%; left: 5%; }
 
-        /* UI LAYER */
         #ui-layer { height: 38%; background: #000; border-top: 3px solid var(--gold); padding: 10px; display: flex; flex-direction: column; box-sizing: border-box; }
-        
-        .start-btn { width: 100%; padding: 18px; background: var(--red); color: white; border: 2px solid var(--gold); font-weight: bold; font-size: 1.2rem; border-radius: 8px; flex-shrink: 0; }
-
         .hidden { display: none !important; }
-        button { cursor: pointer; border-radius: 4px; }
-        .payout-particle { position: absolute; font-weight: bold; font-size: 1.2rem; pointer-events: none; z-index: 50; transition: all 1.2s ease-in-out; }
+        .payout-particle { position: absolute; font-weight: bold; font-size: 1.2rem; pointer-events: none; z-index: 50; transition: 1.2s; }
     </style>
 </head>
 <body>
 
 <div id="game-view">
     <div id="setup-screen">
-        <h2 style="text-align: center; color: var(--gold); margin: 10px 0;">CHŌ-HAN DEN</h2>
-        <div class="setup-list" id="setup-list"></div>
-        <button class="start-btn" onclick="startGame()">OPEN THE DEN</button>
+        <div style="padding: 15px; text-align: center; border-bottom: 1px solid #333;">
+            <h2 style="color: var(--gold); margin: 0;">CHŌ-HAN DEN</h2>
+        </div>
+        
+        <div class="setup-content" id="setup-list">
+            </div>
+
+        <div class="setup-footer">
+            <button class="start-btn" onclick="startGame()">OPEN THE DEN</button>
+        </div>
     </div>
 
     <div id="log-ticker">SET THE TABLE</div>
@@ -117,18 +135,14 @@
     const colors = ['#FF5252', '#FF4081', '#E040FB', '#7C4DFF', '#536DFE', '#448AFF', '#18FFFF', '#64FFDA'];
     const diePatterns = [[], [4], [0, 8], [0, 4, 8], [0, 2, 6, 8], [0, 2, 4, 6, 8], [0, 2, 3, 5, 6, 8]];
     let players = [], bets = [], curIdx = 0, isCheating = false, roundResult = "";
-    let config = Array(8).fill(false); // false = HUMAN, true = CPU
+    let config = Array(8).fill(false);
 
-    // Generate Setup Rows
     const setupList = document.getElementById('setup-list');
     for(let i=0; i<8; i++) {
         const row = document.createElement('div');
         row.className = 'setup-row';
         row.style.borderColor = colors[i];
-        row.innerHTML = `
-            <input type="text" id="name-${i}" value="Gambler ${i+1}">
-            <button class="type-btn" id="type-${i}" onclick="toggleType(${i})">HUMAN</button>
-        `;
+        row.innerHTML = `<input type="text" id="name-${i}" value="Gambler ${i+1}"><button class="type-btn" id="type-${i}" onclick="toggleType(${i})">HUMAN</button>`;
         setupList.appendChild(row);
     }
 
@@ -146,15 +160,7 @@
             name: document.getElementById(`name-${i}`).value,
             money: 1000, isAI: isAI, color: colors[i], active: true
         }));
-        
-        document.getElementById('spots-container').innerHTML = players.map((p, i) => `
-            <div id="spot-${i}" class="player-spot spot-${i}">
-                <div class="shout-bubble" id="shout-${i}"></div>
-                <div class="coin-visual" id="coin-${i}">-</div>
-                <div style="color:${p.color}">${p.name}</div>
-            </div>
-        `).join('');
-
+        document.getElementById('spots-container').innerHTML = players.map((p, i) => `<div id="spot-${i}" class="player-spot spot-${i}"><div class="shout-bubble" id="shout-${i}"></div><div class="coin-visual" id="coin-${i}">-</div><div style="color:${p.color}">${p.name}</div></div>`).join('');
         document.getElementById('setup-screen').classList.add('hidden');
         newRound();
     }
@@ -181,12 +187,9 @@
             if(!p.active || p.money <= 0) { curIdx++; nextTurn(); return; }
             document.querySelectorAll('.player-spot').forEach(s => s.style.transform = "scale(1)");
             document.getElementById(`spot-${curIdx}`).style.transform = "scale(1.3)";
-
             if(p.isAI) {
-                ticker(p.name + " IS THINKING...");
-                setTimeout(() => {
-                    confirmBet(Math.random() > 0.5 ? 'Chō' : 'Han', Math.min(100, p.money));
-                }, 800);
+                ticker(p.name + " is thinking...");
+                setTimeout(() => confirmBet(Math.random() > 0.5 ? 'Chō' : 'Han', Math.min(100, p.money)), 800);
             } else {
                 ticker("YOUR TURN, " + p.name.toUpperCase());
                 document.getElementById('betting-ui').classList.remove('hidden');
@@ -257,17 +260,14 @@
             if(!bets[i] || !players[i].active) continue;
             const won = (bets[i].type === roundResult);
             ticker(`${players[i].name}: ${won ? 'WIN!' : 'LOSE!'}`);
-            
             const p = document.createElement('div');
             p.className = 'payout-particle';
             p.innerText = won ? "+" + bets[i].amt : "-" + bets[i].amt;
             p.style.color = won ? 'var(--win)' : 'var(--lose)';
             p.style.left = '50%'; p.style.top = '50%';
             document.getElementById('tatami').appendChild(p);
-
             const rect = document.getElementById(`spot-${i}`).getBoundingClientRect();
             const matRect = document.getElementById('tatami').getBoundingClientRect();
-            
             setTimeout(() => {
                 p.style.left = (rect.left - matRect.left + 25) + 'px';
                 p.style.top = (rect.top - matRect.top + 10) + 'px';
