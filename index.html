@@ -3,110 +3,123 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Chō-Han Bakuchi</title>
+    <title>Chō-Han: Grand Den</title>
     <style>
         :root {
-            --tatami: #c2b99a;
-            --wood: #4a3423;
-            --red: #b32424;
-            --gold: #ffd700;
-            --ink: #1a1a1a;
+            --tatami: #b8af8b;
+            --wood: #2c1e16;
+            --red: #8b0000;
+            --gold: #d4af37;
+            --win: #2e7d32;
+            --lose: #c62828;
         }
 
         body {
-            background: var(--ink);
-            color: white;
-            font-family: 'Trebuchet MS', sans-serif;
+            background: #000;
+            color: #fff;
+            font-family: 'Segoe UI', sans-serif;
             margin: 0;
+            overflow: hidden;
             display: flex;
             justify-content: center;
             height: 100vh;
+        }
+
+        #game-view {
+            width: 100%;
+            max-width: 500px;
+            background: var(--wood);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* LOG TICKER (TOP) */
+        #log-ticker {
+            height: 30px;
+            background: rgba(0,0,0,0.8);
+            border-bottom: 1px solid var(--gold);
+            color: var(--gold);
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-transform: uppercase;
             overflow: hidden;
         }
 
-        #game-container {
-            width: 100%;
-            max-width: 450px;
-            display: flex;
-            flex-direction: column;
-            background: var(--wood);
-            position: relative;
-        }
-
-        /* TOP STATUS BAR */
-        #header {
-            height: 40px;
-            background: var(--red);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 0.9rem;
-            border-bottom: 2px solid var(--gold);
-        }
-
         /* THE MAT (CENTER) */
-        #tatami-mat {
-            flex: 1;
+        #tatami {
+            flex: 1.2;
             background: var(--tatami);
-            margin: 10px;
-            border: 10px solid #8e825e;
+            margin: 0 15px;
+            border: 8px solid #3d2b1f;
             position: relative;
             display: flex;
-            flex-direction: column;
-            align-items: center;
             justify-content: center;
-            box-shadow: inset 0 0 50px rgba(0,0,0,0.3);
+            align-items: center;
+            box-shadow: inset 0 0 80px rgba(0,0,0,0.4);
         }
 
-        .pot-visual { font-size: 2rem; color: var(--wood); margin-bottom: 10px; }
-        .cup { font-size: 80px; z-index: 5; transition: transform 0.4s; }
-        .dice-area { font-size: 40px; position: absolute; top: 55%; display: flex; gap: 10px; }
+        .cup { font-size: 100px; z-index: 10; transition: transform 0.3s; }
+        .dice-reveal { font-size: 45px; position: absolute; top: 50%; display: flex; gap: 15px; }
 
-        /* CONTROLS (MIDDLE/BOTTOM) */
-        #ui-overlay {
-            background: rgba(0,0,0,0.9);
+        /* UI CONTROLS (MIDDLE) */
+        #ui-layer {
+            flex: 1;
+            background: rgba(10,10,10,0.95);
             padding: 15px;
-            border-top: 2px solid var(--gold);
-            min-height: 220px;
+            border-top: 3px solid var(--gold);
+            z-index: 20;
         }
 
-        .btn-group { display: flex; justify-content: center; gap: 10px; margin-top: 10px; }
+        .player-header { text-align: center; margin-bottom: 10px; }
+        .stepper { display: flex; justify-content: center; align-items: center; gap: 10px; }
+        .stepper button { flex: 0; min-width: 50px; background: #333; }
+        
         button {
-            padding: 15px;
-            border-radius: 8px;
+            padding: 12px;
             border: 1px solid var(--gold);
             background: var(--red);
             color: white;
             font-weight: bold;
-            flex: 1;
+            border-radius: 5px;
+            cursor: pointer;
         }
 
-        .stepper { display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 10px; }
-        input { width: 80px; text-align: center; font-size: 1.2rem; background: #000; color: var(--gold); border: 1px solid var(--gold); }
+        .bet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
 
-        /* LOG SYSTEM */
-        #game-log {
-            height: 80px;
-            background: #000;
-            font-size: 0.75rem;
-            padding: 5px;
+        /* RESULT TABS */
+        #result-display {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            margin-top: 10px;
+            max-height: 200px;
             overflow-y: auto;
-            color: #aaa;
-            border-top: 1px solid #333;
         }
 
-        .log-entry { border-bottom: 1px solid #222; padding: 2px; }
-        .log-win { color: #4caf50; }
-        .log-lose { color: #ff5252; }
-        .log-cheat { color: var(--gold); font-weight: bold; }
+        .res-card {
+            padding: 8px;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 0.8rem;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
 
-        /* ANIMATIONS */
-        .shake { animation: rumble 0.1s infinite; }
-        @keyframes rumble {
-            0% { transform: translate(1px, 1px); }
-            50% { transform: translate(-1px, -1px); }
-            100% { transform: translate(1px, -1px); }
+        /* VFX CLASS */
+        .shake-camera { animation: shake 0.3s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-2px, 0, 0); }
+            20%, 80% { transform: translate3d(4px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+            40%, 60% { transform: translate3d(6px, 0, 0); }
+        }
+
+        .dust-cloud { position: absolute; pointer-events: none; animation: poof 0.5s ease-out forwards; }
+        @keyframes poof {
+            0% { transform: scale(0.5); opacity: 0.8; }
+            100% { transform: scale(3); opacity: 0; }
         }
 
         .hidden { display: none !important; }
@@ -114,199 +127,191 @@
 </head>
 <body>
 
-<div id="game-container">
-    <div id="header">CHŌ-HAN DEN</div>
+<div id="game-view">
+    <div id="log-ticker">WELCOME TO THE DEN...</div>
 
-    <div id="tatami-mat">
-        <div class="pot-visual" id="pot-display">💰 0</div>
+    <div id="tatami">
         <div id="cup" class="cup">🏺</div>
-        <div id="dice-container" class="dice-area hidden">⚀ ⚀</div>
-        <button id="call-out-btn" class="hidden" style="position:absolute; bottom:10px; background:orange; color:black;" onclick="callOut()">CALL OUT CHEAT!</button>
+        <div id="dice-reveal" class="dice-reveal hidden"></div>
+        <button id="call-out" class="hidden" style="position:absolute; bottom:20px; z-index:30; background:orange; color:black;" onclick="doCallOut()">CALL CHEAT!</button>
     </div>
 
-    <div id="ui-overlay">
+    <div id="ui-layer">
         <div id="setup-ui">
-            <p style="text-align:center">Number of Players:</p>
-            <div class="btn-group">
-                <button onclick="startGame(1)">1</button>
-                <button onclick="startGame(2)">2</button>
-                <button onclick="startGame(4)">4</button>
-                <button onclick="startGame(8)">8</button>
+            <h3 style="text-align:center">Gamble with:</h3>
+            <div class="bet-grid">
+                <button onclick="start(1, 1)">1 Human + 1 AI</button>
+                <button onclick="start(1, 3)">1 Human + 3 AI</button>
+                <button onclick="start(2, 0)">2 Humans</button>
+                <button onclick="start(4, 4)">4 Humans + 4 AI</button>
             </div>
         </div>
 
         <div id="betting-ui" class="hidden">
-            <div style="text-align:center">
-                <strong id="player-name" style="color:var(--gold); font-size:1.2rem;">Player</strong><br>
-                <small>Purse: <span id="player-money">0</span> Mon</small>
+            <div class="player-header">
+                <span id="p-name" style="font-size:1.3rem; border-bottom: 2px solid;">NAME</span><br>
+                <span id="p-money" style="color:var(--gold)">1000</span> Mon
             </div>
             <div class="stepper">
-                <button style="flex:0; padding:10px;" onclick="changeBet(-50)">-50</button>
-                <input type="number" id="bet-val" value="50">
-                <button style="flex:0; padding:10px;" onclick="changeBet(50)">+50</button>
+                <button onclick="modBet(-50)">-50</button>
+                <input type="number" id="bet-amt" value="100" style="width:70px; text-align:center; background:#000; color:var(--gold); border:1px solid var(--gold);">
+                <button onclick="modBet(50)">+50</button>
             </div>
-            <div class="btn-group">
-                <button onclick="handleBet('Chō')">CHŌ (Even)</button>
-                <button onclick="handleBet('Han')">HAN (Odd)</button>
+            <div class="bet-grid">
+                <button onclick="makeBet('Chō')">CHŌ (Even)</button>
+                <button onclick="makeBet('Han')">HAN (Odd)</button>
             </div>
         </div>
 
-        <div id="result-ui" class="hidden">
-            <h3 id="result-title" style="text-align:center; margin:5px;">Result</h3>
-            <div id="round-summary" style="font-size:0.8rem; text-align:center; margin-bottom:10px;"></div>
-            <button onclick="nextRound()" style="width:100%">START NEXT ROUND</button>
+        <div id="results-ui" class="hidden">
+            <h3 id="round-winner-title" style="text-align:center; margin:0;">-</h3>
+            <div id="result-display"></div>
+            <button onclick="nextRound()" style="width:100%; margin-top:10px;">NEXT ROUND</button>
         </div>
-    </div>
-
-    <div id="game-log">
-        <div class="log-entry">Welcome. Place your bets...</div>
     </div>
 </div>
 
 <script>
     let players = [];
-    let currentBets = [];
-    let turnIdx = 0;
-    let houseCheated = false;
-    let currentOutcome = "";
+    let bets = [];
+    let curIdx = 0;
+    let houseCheat = false;
+    let resultOutcome = "";
     const icons = ['','⚀','⚁','⚂','⚃','⚄','⚅'];
+    const pColors = ['#ff5252', '#448aff', '#ffeb3b', '#e040fb', '#18ffff', '#7cff00', '#ff9100', '#ff4081'];
 
-    function log(msg, className = "") {
-        const logBox = document.getElementById('game-log');
-        logBox.innerHTML = `<div class="log-entry ${className}">${msg}</div>` + logBox.innerHTML;
-    }
+    function ticker(msg) { document.getElementById('log-ticker').innerText = msg; }
 
-    function startGame(count) {
+    function start(humans, ais) {
         players = [];
-        for(let i=1; i<=count; i++) {
-            players.push({ name: "Gamber "+i, money: 1000, bankrupt: false });
-        }
+        for(let i=0; i<humans; i++) players.push({ name: "Player "+(i+1), money: 1000, isAI: false, color: pColors[i] });
+        for(let i=0; i<ais; i++) players.push({ name: "CPU "+(i+1), money: 1000, isAI: true, color: '#999' });
         document.getElementById('setup-ui').classList.add('hidden');
-        startRound();
+        newRound();
     }
 
-    function startRound() {
-        turnIdx = 0;
-        currentBets = [];
-        houseCheated = false;
-        document.getElementById('pot-display').innerText = "💰 0";
+    function newRound() {
+        curIdx = 0; bets = []; houseCheat = false;
         document.getElementById('cup').style.transform = "translateY(0)";
-        document.getElementById('dice-container').classList.add('hidden');
-        document.getElementById('call-out-btn').classList.add('hidden');
-        document.getElementById('result-ui').classList.add('hidden');
-        prepNextBet();
+        document.getElementById('dice-reveal').classList.add('hidden');
+        document.getElementById('results-ui').classList.add('hidden');
+        document.getElementById('call-out').classList.add('hidden');
+        processTurn();
     }
 
-    function changeBet(v) {
-        let el = document.getElementById('bet-val');
-        let n = parseInt(el.value) + v;
-        if(n < 10) n = 10;
-        if(n > players[turnIdx].money) n = players[turnIdx].money;
-        el.value = n;
+    function modBet(v) {
+        let inp = document.getElementById('bet-amt');
+        let val = parseInt(inp.value) + v;
+        if(val < 10) val = 10;
+        if(val > players[curIdx].money) val = players[curIdx].money;
+        inp.value = val;
     }
 
-    function prepNextBet() {
-        if(turnIdx < players.length) {
-            if(players[turnIdx].bankrupt) { turnIdx++; prepNextBet(); return; }
-            document.getElementById('betting-ui').classList.remove('hidden');
-            document.getElementById('player-name').innerText = players[turnIdx].name;
-            document.getElementById('player-money').innerText = players[turnIdx].money;
-            document.getElementById('bet-val').value = 50;
+    function processTurn() {
+        if(curIdx < players.length) {
+            let p = players[curIdx];
+            if(p.money <= 0) { curIdx++; processTurn(); return; }
+            
+            if(p.isAI) {
+                ticker(p.name + " is thinking...");
+                setTimeout(() => {
+                    let choice = Math.random() > 0.5 ? 'Chō' : 'Han';
+                    let amt = Math.floor(Math.random() * (p.money * 0.3)) + 10;
+                    bets.push({ type: choice, amt: amt });
+                    curIdx++; processTurn();
+                }, 600);
+            } else {
+                document.getElementById('betting-ui').classList.remove('hidden');
+                document.getElementById('p-name').innerText = p.name;
+                document.getElementById('p-name').style.borderColor = p.color;
+                document.getElementById('p-money').innerText = p.money;
+                document.getElementById('bet-amt').value = 50;
+            }
         } else {
             document.getElementById('betting-ui').classList.add('hidden');
-            rollDice();
+            roll();
         }
     }
 
-    function handleBet(type) {
-        let amt = parseInt(document.getElementById('bet-val').value);
-        currentBets.push({ type, amt });
-        let currentPot = parseInt(document.getElementById('pot-display').innerText.split(' ')[1]);
-        document.getElementById('pot-display').innerText = "💰 " + (currentPot + amt);
-        log(`${players[turnIdx].name} bet ${amt} on ${type}`);
-        turnIdx++;
-        prepNextBet();
+    function makeBet(type) {
+        let amt = parseInt(document.getElementById('bet-amt').value);
+        bets.push({ type, amt });
+        curIdx++;
+        processTurn();
     }
 
-    function rollDice() {
+    function roll() {
+        ticker("DEALER SHAKES THE CUP...");
         const cup = document.getElementById('cup');
-        const diceBox = document.getElementById('dice-container');
-        cup.classList.add('shake');
-        log("The dealer shakes the cup aggressively...");
-
-        // Dice rolling VFX
-        diceBox.classList.remove('hidden');
-        let rollInterval = setInterval(() => {
-            diceBox.innerText = icons[Math.floor(Math.random()*6)+1] + " " + icons[Math.floor(Math.random()*6)+1];
-        }, 50);
-
+        cup.classList.add('shake-camera');
+        
         setTimeout(() => {
-            clearInterval(rollInterval);
-            cup.classList.remove('shake');
-            cup.style.transform = "translateY(-100px)"; // Open cup
-
+            cup.classList.remove('shake-camera');
+            cup.style.transform = "translateY(-120px)";
+            vfxDust();
+            
             let d1 = Math.floor(Math.random()*6)+1;
             let d2 = Math.floor(Math.random()*6)+1;
+            if(Math.random() < 0.2) houseCheat = true; // Dealer nudges
 
-            // Dealer Cheats? (15% chance if players are winning too much)
-            if(Math.random() < 0.15) { houseCheated = true; d2 = (d2 % 6) + 1; }
-
-            const sum = d1 + d2;
-            currentOutcome = (sum % 2 === 0) ? 'Chō' : 'Han';
-            diceBox.innerText = icons[d1] + " " + icons[d2];
+            let sum = d1 + d2;
+            resultOutcome = (sum % 2 === 0) ? 'Chō' : 'Han';
+            document.getElementById('dice-reveal').innerHTML = `<span>${icons[d1]}</span><span>${icons[d2]}</span>`;
+            document.getElementById('dice-reveal').classList.remove('hidden');
             
-            document.getElementById('call-out-btn').classList.remove('hidden');
-            document.getElementById('result-ui').classList.remove('hidden');
-            document.getElementById('result-title').innerText = `RESULT: ${currentOutcome.toUpperCase()}`;
-            showSummary();
-        }, 1500);
+            document.getElementById('call-out').classList.remove('hidden');
+            ticker("RESULT: " + resultOutcome.toUpperCase());
+            showResults();
+        }, 1200);
     }
 
-    function showSummary() {
-        let summary = "";
+    function showResults() {
+        document.getElementById('results-ui').classList.remove('hidden');
+        document.getElementById('round-winner-title').innerText = resultOutcome.toUpperCase();
+        const grid = document.getElementById('result-display');
+        grid.innerHTML = "";
+
         players.forEach((p, i) => {
-            if(p.bankrupt) return;
-            const b = currentBets[i];
-            if(b.type === currentOutcome) {
-                summary += `${p.name}: +${b.amt} Mon<br>`;
-            } else {
-                summary += `${p.name}: -${b.amt} Mon<br>`;
-            }
+            if(p.money <= 0 && !bets[i]) return;
+            let b = bets[i];
+            let won = (b.type === resultOutcome);
+            let color = won ? 'var(--win)' : 'var(--lose)';
+            grid.innerHTML += `
+                <div class="res-card" style="background:${color}; border-top: 4px solid ${p.color}">
+                    <strong>${p.name}</strong><br>
+                    ${won ? '+'+b.amt : '-'+b.amt} Mon
+                </div>
+            `;
+            if(won) p.money += b.amt; else p.money -= b.amt;
         });
-        document.getElementById('round-summary').innerHTML = summary;
     }
 
-    function callOut() {
-        document.getElementById('call-out-btn').classList.add('hidden');
-        if(houseCheated) {
-            log("CAUGHT RED HANDED! The dealer was nudging the dice!", "log-cheat");
-            players.forEach((p, i) => { 
-                if(!p.bankrupt) { p.money += (currentBets[i].amt * 2); log(`${p.name} compensated!`, "log-win"); }
-            });
+    function vfxDust() {
+        const dust = document.createElement('div');
+        dust.className = 'dust-cloud';
+        dust.innerHTML = "💨";
+        document.getElementById('tatami').appendChild(dust);
+        setTimeout(() => dust.remove(), 500);
+    }
+
+    function doCallOut() {
+        document.getElementById('call-out').classList.add('hidden');
+        document.getElementById('game-view').classList.add('shake-camera');
+        setTimeout(() => document.getElementById('game-view').classList.remove('shake-camera'), 300);
+
+        if(houseCheat) {
+            ticker("CHEATER! Dealer was caught!");
+            players.forEach((p, i) => { if(bets[i]) p.money += (bets[i].amt * 2); });
         } else {
-            log("FALSE ACCUSATION! The dice were fair. The dealer is insulted.", "log-lose");
-            players.forEach((p, i) => { 
-                if(!p.bankrupt) { p.money = Math.floor(p.money * 0.5); log(`${p.name} fined 50%!`, "log-lose"); }
-            });
+            ticker("INNOCENT! Dealer fines you all!");
+            players.forEach(p => p.money = Math.floor(p.money * 0.7));
         }
-        showSummary();
+        showResults();
     }
 
     function nextRound() {
-        // Apply scores
-        players.forEach((p, i) => {
-            if(p.bankrupt) return;
-            const b = currentBets[i];
-            if(b.type === currentOutcome) { p.money += b.amt; }
-            else { p.money -= b.amt; if(p.money <= 0) p.bankrupt = true; }
-        });
-        
-        if(players.every(p => p.bankrupt)) {
-            alert("Everyone is bankrupt! The House Wins!");
-            location.reload();
-        } else {
-            startRound();
-        }
+        if(players.every(p => p.money <= 0)) { alert("All Gamblers Broke!"); location.reload(); }
+        newRound();
     }
 </script>
 </body>
